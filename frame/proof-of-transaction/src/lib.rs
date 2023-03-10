@@ -2,20 +2,28 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use pallet::*;
-use codec::{Decode, Encode, MaxEncodedLen};
+use codec::{Decode, Encode, MaxEncodedLen, EncodeLike};
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 
+pub type VoteCount = u32;
+
 #[derive(RuntimeDebug, Encode, Decode, TypeInfo)]
 pub struct Vote<AccountId> {
-	who: Option<AccountId>
+	who: AccountId,
+	count: VoteCount,
 }
 
-impl<AccountId> Default for Vote<AccountId> {
-	fn default() -> Self {
+impl<AccountId> Vote<AccountId> {
+	pub fn default(who: AccountId) -> Self {
 		Self {
-			who: None
+			who,
+			count: 0
 		}
+	}
+
+	fn increase_count_by_one(&mut self) {
+		self.count = self.count.saturating_add(1);
 	}
 }
 
@@ -35,11 +43,12 @@ pub mod pallet {
 	}
 
 	#[pallet::storage]
-	pub type VoteStatus<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, Vote<T::AccountId>, ValueQuery>;
+	pub type VoteStatus<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, Vote<T::AccountId>, OptionQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
+		Voted { who: T::AccountId },
 		VoteCollected { who: T::AccountId },
 		VoteReceived { who: T::AccountId }
 	}
@@ -47,4 +56,18 @@ pub mod pallet {
 
 pub trait PotHandler<T: Config> {
 	fn collect_vote(who: T::AccountId);
+}
+
+impl<T: Config> PotHandler<T> for Pallet<T> {
+	fn collect_vote(who: <T>::AccountId) {
+		if let Some(mut vote_status) = VoteStatus::<T>::get(&who) {
+			vote_status.increase_count_by_one();
+			VoteStatus::<T>::insert(&who, vote_status);
+			Pallet::<T>::deposit_event(
+				Event::Voted { who }
+			);
+		} else {
+			VoteStatus::<T>::insert(&who, Vote::<T::AccountId>::default(who.clone()));
+		}
+	}
 }
