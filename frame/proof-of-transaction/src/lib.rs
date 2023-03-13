@@ -1,8 +1,15 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(test)]
+mod tests;
+
+#[cfg(test)]
+mod mock;
+
+
 pub use pallet::*;
-use codec::{Decode, Encode, MaxEncodedLen, EncodeLike};
+use codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 
