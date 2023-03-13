@@ -1,8 +1,11 @@
 
 use pallet as pallet_test;
-use pallet::*;
-use crate::{pallet as pallet_pot, PotHandler};
-use frame_support::traits::{ConstU16, ConstU64};
+pub use pallet::*;
+use crate::{pallet as pallet_pot, PotHandler, VoteStatus};
+pub use frame_support::
+    {traits::{ConstU16, ConstU64},
+    assert_ok
+};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -65,12 +68,6 @@ impl pallet_test::Config for Test {
 impl pallet_pot::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 }
-
-// Build genesis storage according to the mock runtime.
-pub fn new_test_ext() -> sp_io::TestExternalities {
-	frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
-}
-
 #[frame_support::pallet(dev_mode)]
 pub mod pallet {
 
@@ -102,4 +99,12 @@ pub mod pallet {
             Ok(())
         }
     }
+}
+
+// Build genesis storage according to the mock runtime.
+pub fn new_test_ext() -> sp_io::TestExternalities {
+	frame_system::GenesisConfig::default()
+        .build_storage::<Test>()
+        .unwrap()
+        .into()
 }
