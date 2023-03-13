@@ -67,7 +67,12 @@ impl<T: Config> PotHandler<T::AccountId> for Pallet<T> {
 				Event::Voted { who }
 			);
 		} else {
-			VoteStatus::<T>::insert(&who, Vote::<T::AccountId>::default(who.clone()));
+			let mut vote = Vote::<T::AccountId>::default(who.clone());
+			vote.increase_count_by_one();
+			VoteStatus::<T>::insert(&who, vote);
+			Pallet::<T>::deposit_event(
+				Event::Voted { who }
+			);
 		}
 	}
 }
