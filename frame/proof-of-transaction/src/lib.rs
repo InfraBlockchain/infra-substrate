@@ -54,12 +54,12 @@ pub mod pallet {
 	}
 }
 
-pub trait PotHandler<T: Config> {
-	fn collect_vote(who: T::AccountId);
+pub trait PotHandler<AccountId> {
+	fn collect_vote(who: AccountId);
 }
 
-impl<T: Config> PotHandler<T> for Pallet<T> {
-	fn collect_vote(who: <T>::AccountId) {
+impl<T: Config> PotHandler<T::AccountId> for Pallet<T> {
+	fn collect_vote(who: T::AccountId) {
 		if let Some(mut vote_status) = VoteStatus::<T>::get(&who) {
 			vote_status.increase_count_by_one();
 			VoteStatus::<T>::insert(&who, vote_status);
