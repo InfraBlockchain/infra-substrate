@@ -1,10 +1,21 @@
-use crate as pallet_template;
-use frame_support::traits::{ConstU16, ConstU64};
+
+use pallet as pallet_test;
+pub use pallet::*;
+use crate::{pallet as pallet_pot, PotHandler, VoteStatus};
+pub use frame_support::
+    {traits::{ConstU16, ConstU64},
+    assert_ok
+};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
+
+pub(crate) type AccountId = u64;
+pub(crate) type AccountIndex = u64;
+pub(crate) type BlockNumber = u64;
+pub(crate) type Balance = u128;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -17,7 +28,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system,
-		TemplateModule: pallet_template,
+		TestModule: pallet_test,
 		Pot: pallet_pot,
 	}
 );
@@ -30,10 +41,10 @@ impl frame_system::Config for Test {
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
 	type Index = u64;
-	type BlockNumber = u64;
+	type BlockNumber = BlockNumber;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type AccountId = u64;
+	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
 	type RuntimeEvent = RuntimeEvent;
@@ -49,7 +60,7 @@ impl frame_system::Config for Test {
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
-impl pallet_template::Config for Test {
+impl pallet_test::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Pot = Pot;
 }
@@ -57,8 +68,43 @@ impl pallet_template::Config for Test {
 impl pallet_pot::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 }
+#[frame_support::pallet(dev_mode)]
+pub mod pallet {
+
+    use super::PotHandler;
+    use frame_support::pallet_prelude::*;
+    use frame_system::pallet_prelude::*;
+
+    #[pallet::config]
+    pub trait Config: frame_system::Config {
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+
+        type Pot: PotHandler<Self::AccountId>;
+    }
+
+    #[pallet::pallet]
+    pub struct Pallet<T>(_);
+
+    #[pallet::event]
+    pub enum Event<T: Config> {}
+
+    #[pallet::call]
+    impl<T: Config> Pallet<T> {
+        /// Extrinsic for testing vote collecting
+        #[pallet::call_index(0)]
+        pub fn test_vote(origin: OriginFor<T>, vote_to: T::AccountId) -> DispatchResult {
+            let _ = ensure_signed(origin)?;
+            T::Pot::collect_vote(vote_to);
+
+            Ok(())
+        }
+    }
+}
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
+	frame_system::GenesisConfig::default()
+        .build_storage::<Test>()
+        .unwrap()
+        .into()
 }
