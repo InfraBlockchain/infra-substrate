@@ -16,6 +16,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 codec = { package = "parity-scale-codec", version = "3.2.2", default-features = false, features = ["derive"] }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 
+# Substrate
 pallet-aura = { version = "4.0.0-dev", default-features = false, path = "../../../frame/aura" }
 pallet-balances = { version = "4.0.0-dev", default-features = false, path = "../../../frame/balances" }
 frame-support = { version = "4.0.0-dev", default-features = false, path = "../../../frame/support" }
@@ -39,6 +40,9 @@ sp-session = { version = "4.0.0-dev", default-features = false, path = "../../..
 sp-std = { version = "5.0.0", default-features = false, path = "../../../primitives/std" }
 sp-transaction-pool = { version = "4.0.0-dev", default-features = false, path = "../../../primitives/transaction-pool" }
 sp-version = { version = "5.0.0", default-features = false, path = "../../../primitives/version" }
+
+# Custom
+pallet-pot = { version = "0.1.0", default-features = false, path = "../../../frame/proof-of-transaction" }
 
 # Used for the node template's RPCs
 frame-system-rpc-runtime-api = { version = "4.0.0-dev", default-features = false, path = "../../../frame/system/rpc/runtime-api/" }
@@ -89,6 +93,7 @@ std = [
 	"sp-transaction-pool/std",
 	"sp-version/std",
 	"substrate-wasm-builder",
+	"pallet-pot/std"
 ]
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",

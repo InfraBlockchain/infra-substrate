@@ -18,6 +18,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system,
 		TemplateModule: pallet_template,
+		Pot: pallet_pot,
 	}
 );
 
@@ -49,6 +50,11 @@ impl frame_system::Config for Test {
 }
 
 impl pallet_template::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type Pot = Pot;
+}
+
+impl pallet_pot::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 }
 

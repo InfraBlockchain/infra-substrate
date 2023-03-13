@@ -5097,6 +5097,7 @@ dependencies = [
  "pallet-balances",
  "pallet-grandpa",
  "pallet-insecure-randomness-collective-flip",
+ "pallet-pot",
  "pallet-sudo",
  "pallet-template",
  "pallet-timestamp",
@@ -6334,6 +6335,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-pot"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-preimage"
 version = "4.0.0-dev"
 dependencies = [
@@ -6687,6 +6703,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "pallet-pot",
  "parity-scale-codec",
  "scale-info",
  "sp-core",

@@ -21,6 +21,9 @@ frame-benchmarking = { version = "4.0.0-dev", default-features = false, optional
 frame-support = { version = "4.0.0-dev", default-features = false, path = "../../../../frame/support" }
 frame-system = { version = "4.0.0-dev", default-features = false, path = "../../../../frame/system" }
 
+# Custom
+pallet-pot = { version = "0.1.0", default-features = false, path = "../../../../frame/proof-of-transaction" }
+
 [dev-dependencies]
 sp-core = { version = "7.0.0", path = "../../../../primitives/core" }
 sp-io = { version = "7.0.0", path = "../../../../primitives/io" }
@@ -34,6 +37,7 @@ std = [
 	"frame-support/std",
 	"frame-system/std",
 	"scale-info/std",
+	"pallet-pot/std",
 ]
 runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
 try-runtime = ["frame-support/try-runtime"]
