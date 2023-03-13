@@ -15,7 +15,7 @@ use sp_runtime::RuntimeDebug;
 
 pub type VoteCount = u32;
 
-#[derive(RuntimeDebug, Encode, Decode, TypeInfo)]
+#[derive(RuntimeDebug, PartialEq, Encode, Decode, TypeInfo)]
 pub struct Vote<AccountId> {
 	who: AccountId,
 	count: VoteCount,
