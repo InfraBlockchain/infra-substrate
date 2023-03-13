@@ -17,9 +17,7 @@ sp-runtime = { version = "7.0.0", default-features = false, path = "../../primit
 sp-std = { version = "5.0.0", default-features = false, path = "../../primitives/std" }
 
 [dev-dependencies]
-pallet-template = { version = "4.0.0-dev", default-features = false, path = "../../bin/node-template/pallets/template" }
 pallet-balances = { version = "4.0.0-dev", path = "../balances" }
-
 
 [features]
 default = ["std"]
@@ -33,5 +31,4 @@ std = [
 	"sp-io/std",
 	"sp-runtime/std",
 	"sp-std/std",
-	"pallet-template/std"
 ]
