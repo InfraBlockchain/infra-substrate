@@ -1,10 +1,12 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::pallet_prelude::ValidTransaction;
+use frame_support::{
+	dispatch::{PostDispatchInfo, DispatchInfo}
+};
 use sp_runtime::{
-	transaction_validity::{TransactionValidityError, TransactionValidity},
-	traits::{SignedExtension, DispatchInfoOf}
+	transaction_validity::{TransactionValidityError, TransactionValidity, ValidTransaction},
+	traits::{SignedExtension, DispatchInfoOf, Dispatchable}
 };
 use codec::{Encode, Decode, MaxEncodedLen};
 use scale_info::TypeInfo;
@@ -60,7 +62,10 @@ impl<T: Config> CollectVote<T> {
 	}
 }
 
-impl<T: Config> SignedExtension for CollectVote<T> {
+impl<T: Config> SignedExtension for CollectVote<T> 
+where
+	T::RuntimeCall: Dispatchable<Info = DispatchInfo, PostInfo = PostDispatchInfo>
+{
 	const IDENTIFIER: &'static str = "ProofOfTransaction";
 	type AccountId = T::AccountId;
 	type Call = T::RuntimeCall;
