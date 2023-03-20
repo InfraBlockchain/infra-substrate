@@ -1,9 +1,10 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use frame_support::pallet_prelude::ValidTransaction;
 use sp_runtime::{
-	transaction_validity::TransactionValidityError,
-	traits::SignedExtension
+	transaction_validity::{TransactionValidityError, TransactionValidity},
+	traits::{SignedExtension, DispatchInfoOf}
 };
 use codec::{Encode, Decode, MaxEncodedLen};
 use scale_info::TypeInfo;
@@ -48,7 +49,15 @@ pub mod pallet {
 #[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo)]
 #[scale_info(skip_type_params(T))]
 pub struct CollectVote<T: Config> {
-	candidate: T::AccountId
+	candidate: Option<T::AccountId>
+}
+
+impl<T: Config> CollectVote<T> {
+	pub fn new() -> Self {
+		Self {
+			candidate: None
+		}
+	}
 }
 
 impl<T: Config> SignedExtension for CollectVote<T> {
@@ -59,11 +68,21 @@ impl<T: Config> SignedExtension for CollectVote<T> {
 	type Pre = (
 		// ToDo: Vote will be included here
 		// Candidate
-		T::AccountId,
+		Option<T::AccountId>,
 	);
 
 	fn additional_signed(&self) -> sp_std::result::Result<(), TransactionValidityError> {
 		Ok(())
+	}
+
+	fn validate(
+		&self,
+		_who: &Self::AccountId,
+		_call: &Self::Call,
+		_info: &DispatchInfoOf<Self::Call>,
+		_len: usize,
+	) -> TransactionValidity {
+		Ok(ValidTransaction::default())
 	}
 
 	fn pre_dispatch(
@@ -84,22 +103,29 @@ impl<T: Config> SignedExtension for CollectVote<T> {
 			_result: &sp_runtime::DispatchResult,
 		) -> Result<(), TransactionValidityError> {
 		if let Some((candidate,)) = pre {
-			// Do something when pre has 'some' data
-			let info = if let Some(vote_info) = VoteInfo::<T>::get(&candidate) {
-				// ToDo: vote info should be mutated
-				vote_info
-			} else {
-				let vote_info = Vote {
-					candidate: candidate.clone(),
-					// ToDo: Weight need to be handeled
-					weight: 0, 
-				};
-				vote_info
-			};
-			VoteInfo::<T>::insert(&candidate, info);
-			Pallet::<T>::deposit_event(Event::VoteCollected { candidate: candidate.clone() });
+			match candidate {
+				Some(c) => {
+					// Do something when pre has 'some' data
+					let info = if let Some(vote_info) = VoteInfo::<T>::get(&c) {
+						// ToDo: vote info should be mutated
+						vote_info
+					} else {
+						let vote_info = Vote {
+							candidate: c.clone(),
+							// ToDo: Weight need to be handeled
+							weight: 0, 
+						};
+						vote_info
+					};
+					VoteInfo::<T>::insert(&c, info);
+					Pallet::<T>::deposit_event(Event::VoteCollected { candidate: c.clone() });
 
-			return Ok(());
+					return Ok(());
+				}
+				None => {
+					return Ok(());
+				}
+			}
 		}
 
 		Ok(())
@@ -110,5 +136,10 @@ impl<T: Config> sp_std::fmt::Debug for CollectVote<T> {
 	#[cfg(feature = "std")]
 	fn fmt(&self, f: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
 		write!(f, "Vote to {:?}", self.candidate)
+	}
+
+	#[cfg(not(feature = "std"))]
+	fn fmt(&self, _: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
+		Ok(())
 	}
 }
