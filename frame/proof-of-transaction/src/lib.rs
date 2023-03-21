@@ -61,7 +61,39 @@ impl<T: Config> CollectVote<T> {
 	}
 
 	/// Collect vote from extrinsic and update the state
-	pub fn collect_vote_for(_candidate: Option<T::AccountId>) {}
+	pub fn collect_vote_for (
+		candidate: Option<T::AccountId>, 
+		dispatch_weight: VoteWeight
+	) -> Result<(), TransactionValidityError> {
+		match candidate {
+			Some(c) => {
+				let new_weight = { 
+					if let Some(stored_weight) = VoteInfo::<T>::get(&c) {
+						// Add stored_weig
+						dispatch_weight.saturating_add(stored_weight)
+					} else {
+						dispatch_weight
+					}
+				};
+				
+				VoteInfo::<T>::insert(&c, new_weight);
+				Pallet::<T>::deposit_event(
+					Event::VoteCollected {
+						candidate: c.clone(),
+						weight: new_weight,
+					}
+				);
+
+				return Ok(())
+			},
+			None => {
+				Pallet::<T>::deposit_event(
+					Event::NoVote
+				);
+				return Ok(())
+			},
+		}
+	}
 
 	/// Weight would be modified based on the block number
 	pub fn adjust_weight(
@@ -115,33 +147,7 @@ where
 	) -> Result<(), TransactionValidityError> {
 		if let Some((candidate,)) = pre {
 			let dispatch_weight = post_info.calc_actual_weight(info).ref_time();
-			match candidate {
-				Some(c) => {
-					let new_weight = { 
-						if let Some(stored_weight) = VoteInfo::<T>::get(&c) {
-							// Add stored_weig
-							dispatch_weight.saturating_add(stored_weight)
-						} else {
-							dispatch_weight
-						}
-					};
-					VoteInfo::<T>::insert(&c, new_weight);
-					Pallet::<T>::deposit_event(
-						Event::VoteCollected {
-							candidate: c.clone(),
-							weight: new_weight,
-						}
-					);
-
-					return Ok(())
-				},
-				None => {
-					Pallet::<T>::deposit_event(
-						Event::NoVote
-					);
-					return Ok(())
-				},
-			}
+			Self::collect_vote_for(candidate, dispatch_weight)?;
 		}
 
 		Ok(())
