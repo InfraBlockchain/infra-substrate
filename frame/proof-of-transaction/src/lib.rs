@@ -2,6 +2,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::{
+	pallet_prelude::*,
 	dispatch::{PostDispatchInfo, DispatchInfo}
 };
 use frame_system::pallet_prelude::BlockNumberFor;
@@ -24,8 +25,8 @@ pub struct Vote<AccountId> {
 
 #[frame_support::pallet]
 pub mod pallet {
+	
 	use super::*;
-	use frame_support::pallet_prelude::*;
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 
