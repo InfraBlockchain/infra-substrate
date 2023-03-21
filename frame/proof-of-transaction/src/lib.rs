@@ -1,8 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::{Decode, Encode, MaxEncodedLen};
-pub use pallet::*;
-use scale_info::TypeInfo;
 use frame_support::{
 	pallet_prelude::*,
 	dispatch::{PostDispatchInfo, DispatchInfo}
@@ -12,7 +9,11 @@ use sp_runtime::{
 	traits::{DispatchInfoOf, Dispatchable, SignedExtension},
 	transaction_validity::{TransactionValidity, TransactionValidityError, ValidTransaction},
 };
+use codec::{Decode, Encode, MaxEncodedLen};
+pub use pallet::*;
+use scale_info::TypeInfo;
 
+/// Type of weight that refers to 'ref_time' in Weight struct
 pub type VoteWeight = u64;
 #[derive(Encode, Decode, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
@@ -44,6 +45,7 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		VoteCollected { candidate: T::AccountId, weight: VoteWeight },
+		NoVote,
 	}
 }
 
@@ -78,11 +80,7 @@ where
 	type AccountId = T::AccountId;
 	type Call = T::RuntimeCall;
 	type AdditionalSigned = ();
-	type Pre = (
-		// ToDo: Vote will be included here
-		// Candidate
-		Option<T::AccountId>,
-	);
+	type Pre = (Option<T::AccountId>,);
 
 	fn additional_signed(&self) -> sp_std::result::Result<(), TransactionValidityError> {
 		Ok(())
@@ -116,27 +114,31 @@ where
 		_result: &sp_runtime::DispatchResult,
 	) -> Result<(), TransactionValidityError> {
 		if let Some((candidate,)) = pre {
+			let dispatch_weight = post_info.calc_actual_weight(info).ref_time();
 			match candidate {
 				Some(c) => {
-					let weight = {
-						let w = post_info.calc_actual_weight(info).ref_time();
-
+					let new_weight = { 
 						if let Some(stored_weight) = VoteInfo::<T>::get(&c) {
-							stored_weight + w
+							// Add stored_weig
+							dispatch_weight.saturating_add(stored_weight)
 						} else {
-							w
+							dispatch_weight
 						}
 					};
-
-					VoteInfo::<T>::insert(&c, weight);
-					Pallet::<T>::deposit_event(Event::VoteCollected {
-						candidate: c.clone(),
-						weight,
-					});
+					VoteInfo::<T>::insert(&c, new_weight);
+					Pallet::<T>::deposit_event(
+						Event::VoteCollected {
+							candidate: c.clone(),
+							weight: new_weight,
+						}
+					);
 
 					return Ok(())
 				},
 				None => {
+					Pallet::<T>::deposit_event(
+						Event::NoVote
+					);
 					return Ok(())
 				},
 			}
