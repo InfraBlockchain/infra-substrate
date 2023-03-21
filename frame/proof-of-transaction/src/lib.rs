@@ -12,6 +12,7 @@ use codec::{Encode, Decode, MaxEncodedLen};
 use scale_info::TypeInfo;
 pub use pallet::*;
 
+pub type VoteIdOf<T> = <<T as frame_system::Config>::AccountId>;
 pub type VoteWeight = u32;
 #[derive(Encode, Decode, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
@@ -25,7 +26,6 @@ pub struct Vote<AccountId> {
 pub mod pallet {
 	use super::*;
 	use frame_support::pallet_prelude::*;
-	use frame_system::pallet_prelude::*;
 	
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
