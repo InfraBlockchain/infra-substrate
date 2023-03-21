@@ -1,15 +1,18 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode, MaxEncodedLen};
-use frame_support::dispatch::{DispatchInfo, PostDispatchInfo};
 pub use pallet::*;
 use scale_info::TypeInfo;
+use frame_support::{
+	pallet_prelude::*,
+	dispatch::{PostDispatchInfo, DispatchInfo}
+};
+use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::{
 	traits::{DispatchInfoOf, Dispatchable, SignedExtension},
 	transaction_validity::{TransactionValidity, TransactionValidityError, ValidTransaction},
 };
 
-// pub type VoteIdOf<T> = <<T as frame_system::Config>::AccountId>;
 pub type VoteWeight = u64;
 #[derive(Encode, Decode, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
@@ -21,9 +24,9 @@ pub struct Vote<AccountId> {
 
 #[frame_support::pallet]
 pub mod pallet {
+	
 	use super::*;
-	use frame_support::pallet_prelude::*;
-
+  
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 
@@ -53,6 +56,17 @@ pub struct CollectVote<T: Config> {
 impl<T: Config> CollectVote<T> {
 	pub fn new() -> Self {
 		Self { candidate: None }
+	}
+
+	/// Collect vote from extrinsic and update the state
+	pub fn collect_vote_for(_candidate: Option<T::AccountId>) {}
+
+	/// Weight would be modified based on the block number
+	pub fn adjust_weight(
+		_weight: &mut VoteWeight, 
+		_genesis_block: BlockNumberFor<T>, 
+		_current_block: BlockNumberFor<T>) {
+
 	}
 }
 
