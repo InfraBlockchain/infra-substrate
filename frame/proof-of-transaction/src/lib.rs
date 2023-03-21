@@ -1,17 +1,17 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
+	dispatch::{DispatchInfo, PostDispatchInfo},
 	pallet_prelude::*,
-	dispatch::{PostDispatchInfo, DispatchInfo}
 };
 use frame_system::pallet_prelude::BlockNumberFor;
+pub use pallet::*;
+use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{DispatchInfoOf, Dispatchable, SignedExtension},
 	transaction_validity::{TransactionValidity, TransactionValidityError, ValidTransaction},
 };
-use codec::{Decode, Encode, MaxEncodedLen};
-pub use pallet::*;
-use scale_info::TypeInfo;
 
 /// Type of weight that refers to 'ref_time' in Weight struct
 pub type VoteWeight = u64;
@@ -25,9 +25,9 @@ pub struct Vote<AccountId> {
 
 #[frame_support::pallet]
 pub mod pallet {
-	
+
 	use super::*;
-  
+
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 
@@ -61,13 +61,13 @@ impl<T: Config> CollectVote<T> {
 	}
 
 	/// Collect vote from extrinsic and update the state
-	pub fn collect_vote_for (
-		candidate: Option<T::AccountId>, 
-		dispatch_weight: VoteWeight
+	pub fn collect_vote_for(
+		candidate: Option<T::AccountId>,
+		dispatch_weight: VoteWeight,
 	) -> Result<(), TransactionValidityError> {
 		match candidate {
 			Some(c) => {
-				let new_weight = { 
+				let new_weight = {
 					if let Some(stored_weight) = VoteInfo::<T>::get(&c) {
 						// Add stored_weig
 						dispatch_weight.saturating_add(stored_weight)
@@ -75,21 +75,17 @@ impl<T: Config> CollectVote<T> {
 						dispatch_weight
 					}
 				};
-				
+
 				VoteInfo::<T>::insert(&c, new_weight);
-				Pallet::<T>::deposit_event(
-					Event::VoteCollected {
-						candidate: c.clone(),
-						weight: new_weight,
-					}
-				);
+				Pallet::<T>::deposit_event(Event::VoteCollected {
+					candidate: c.clone(),
+					weight: new_weight,
+				});
 
 				return Ok(())
 			},
 			None => {
-				Pallet::<T>::deposit_event(
-					Event::NoVote
-				);
+				Pallet::<T>::deposit_event(Event::NoVote);
 				return Ok(())
 			},
 		}
@@ -97,10 +93,10 @@ impl<T: Config> CollectVote<T> {
 
 	/// Weight would be modified based on the block number
 	pub fn adjust_weight(
-		_weight: &mut VoteWeight, 
-		_genesis_block: BlockNumberFor<T>, 
-		_current_block: BlockNumberFor<T>) {
-
+		_weight: &mut VoteWeight,
+		_genesis_block: BlockNumberFor<T>,
+		_current_block: BlockNumberFor<T>,
+	) {
 	}
 }
 
