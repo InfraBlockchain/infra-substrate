@@ -1,32 +1,29 @@
-
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{
-	dispatch::{PostDispatchInfo, DispatchInfo}
-};
-use sp_runtime::{
-	transaction_validity::{TransactionValidityError, TransactionValidity, ValidTransaction},
-	traits::{SignedExtension, DispatchInfoOf, Dispatchable}
-};
-use codec::{Encode, Decode, MaxEncodedLen};
-use scale_info::TypeInfo;
+use codec::{Decode, Encode, MaxEncodedLen};
+use frame_support::dispatch::{DispatchInfo, PostDispatchInfo};
 pub use pallet::*;
+use scale_info::TypeInfo;
+use sp_runtime::{
+	traits::{DispatchInfoOf, Dispatchable, SignedExtension},
+	transaction_validity::{TransactionValidity, TransactionValidityError, ValidTransaction},
+};
 
-pub type VoteIdOf<T> = <<T as frame_system::Config>::AccountId>;
-pub type VoteWeight = u32;
+// pub type VoteIdOf<T> = <<T as frame_system::Config>::AccountId>;
+pub type VoteWeight = u64;
 #[derive(Encode, Decode, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
 pub struct Vote<AccountId> {
 	pub candidate: AccountId,
 	#[codec(compact)]
-	pub weight: VoteWeight
+	pub weight: VoteWeight,
 }
 
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
 	use frame_support::pallet_prelude::*;
-	
+
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 
@@ -37,34 +34,31 @@ pub mod pallet {
 
 	/// Store vote information for each certain account
 	#[pallet::storage]
-	pub type VoteInfo<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, Vote<T::AccountId>, OptionQuery>;
+	pub type VoteInfo<T: Config> =
+		StorageMap<_, Twox64Concat, T::AccountId, VoteWeight, OptionQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		VoteCollected {
-			candidate: T::AccountId
-		}
+		VoteCollected { candidate: T::AccountId, weight: VoteWeight },
 	}
 }
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo)]
 #[scale_info(skip_type_params(T))]
 pub struct CollectVote<T: Config> {
-	candidate: Option<T::AccountId>
+	candidate: Option<T::AccountId>,
 }
 
 impl<T: Config> CollectVote<T> {
 	pub fn new() -> Self {
-		Self {
-			candidate: None
-		}
+		Self { candidate: None }
 	}
 }
 
-impl<T: Config> SignedExtension for CollectVote<T> 
+impl<T: Config> SignedExtension for CollectVote<T>
 where
-	T::RuntimeCall: Dispatchable<Info = DispatchInfo, PostInfo = PostDispatchInfo>
+	T::RuntimeCall: Dispatchable<Info = DispatchInfo, PostInfo = PostDispatchInfo>,
 {
 	const IDENTIFIER: &'static str = "ProofOfTransaction";
 	type AccountId = T::AccountId;
@@ -91,45 +85,46 @@ where
 	}
 
 	fn pre_dispatch(
-			self,
-			_who: &Self::AccountId,
-			_call: &Self::Call,
-			_info: &sp_runtime::traits::DispatchInfoOf<Self::Call>,
-			_len: usize,
-		) -> Result<Self::Pre, frame_support::unsigned::TransactionValidityError> {
+		self,
+		_who: &Self::AccountId,
+		_call: &Self::Call,
+		_info: &sp_runtime::traits::DispatchInfoOf<Self::Call>,
+		_len: usize,
+	) -> Result<Self::Pre, frame_support::unsigned::TransactionValidityError> {
 		Ok((self.candidate,))
 	}
 
 	fn post_dispatch(
-			pre: Option<Self::Pre>,
-			_info: &sp_runtime::traits::DispatchInfoOf<Self::Call>,
-			_post_info: &sp_runtime::traits::PostDispatchInfoOf<Self::Call>,
-			_len: usize,
-			_result: &sp_runtime::DispatchResult,
-		) -> Result<(), TransactionValidityError> {
+		pre: Option<Self::Pre>,
+		info: &sp_runtime::traits::DispatchInfoOf<Self::Call>,
+		post_info: &sp_runtime::traits::PostDispatchInfoOf<Self::Call>,
+		_len: usize,
+		_result: &sp_runtime::DispatchResult,
+	) -> Result<(), TransactionValidityError> {
 		if let Some((candidate,)) = pre {
 			match candidate {
 				Some(c) => {
-					// Do something when pre has 'some' data
-					let info = if let Some(vote_info) = VoteInfo::<T>::get(&c) {
-						// ToDo: vote info should be mutated
-						vote_info
-					} else {
-						let vote_info = Vote {
-							candidate: c.clone(),
-							// ToDo: Weight need to be handeled
-							weight: 0, 
-						};
-						vote_info
-					};
-					VoteInfo::<T>::insert(&c, info);
-					Pallet::<T>::deposit_event(Event::VoteCollected { candidate: c.clone() });
+					let weight = {
+						let w = post_info.calc_actual_weight(info).ref_time();
 
-					return Ok(());
-				}
+						if let Some(stored_weight) = VoteInfo::<T>::get(&c) {
+							stored_weight + w
+						} else {
+							w
+						}
+					};
+
+					VoteInfo::<T>::insert(&c, weight);
+					Pallet::<T>::deposit_event(Event::VoteCollected {
+						candidate: c.clone(),
+						weight,
+					});
+
+					return Ok(())
+				},
 				None => {
-					return Ok(());
-				}
+					return Ok(())
+				},
 			}
 		}
 
