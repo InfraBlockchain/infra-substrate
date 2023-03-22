@@ -11,7 +11,7 @@ use frame_support::{
 	parameter_types,
 	traits::ConstU64,
 };
-type SignedExtra = pallet_pot::CollectVote<TestRuntime>;
+type SignedExtra = pallet_pot::CheckVote<TestRuntime>;
 
 type MockBlock = frame_system::mocking::MockBlock<TestRuntime>;
 type MockUxt = frame_system::mocking::MockUncheckedExtrinsic<

@@ -1,5 +1,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(test)]
+mod tests;
+#[cfg(test)]
+mod mock;
+
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
 	dispatch::{DispatchInfo, PostDispatchInfo},
@@ -51,13 +56,16 @@ pub mod pallet {
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo)]
 #[scale_info(skip_type_params(T))]
-pub struct CollectVote<T: Config> {
+pub struct CheckVote<T: Config> {
 	candidate: Option<T::AccountId>,
 }
 
-impl<T: Config> CollectVote<T> {
-	pub fn new() -> Self {
-		Self { candidate: None }
+impl<T: Config> CheckVote<T> {
+
+	pub fn from(candidate: Option<T::AccountId>) -> Self {
+		Self {
+			candidate
+		}
 	}
 
 	/// Collect vote from extrinsic and update the state
@@ -100,7 +108,7 @@ impl<T: Config> CollectVote<T> {
 	}
 }
 
-impl<T: Config> SignedExtension for CollectVote<T>
+impl<T: Config> SignedExtension for CheckVote<T>
 where
 	T::RuntimeCall: Dispatchable<Info = DispatchInfo, PostInfo = PostDispatchInfo>,
 {
@@ -150,7 +158,7 @@ where
 	}
 }
 
-impl<T: Config> sp_std::fmt::Debug for CollectVote<T> {
+impl<T: Config> sp_std::fmt::Debug for CheckVote<T> {
 	#[cfg(feature = "std")]
 	fn fmt(&self, f: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
 		write!(f, "Vote to {:?}", self.candidate)
