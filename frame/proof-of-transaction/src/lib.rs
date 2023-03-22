@@ -10,7 +10,7 @@ use frame_support::{
 	dispatch::{DispatchInfo, PostDispatchInfo},
 	pallet_prelude::*,
 };
-use frame_system::pallet_prelude::BlockNumberFor;
+// use frame_system::pallet_prelude::BlockNumberFor;
 pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_runtime::{
@@ -20,6 +20,7 @@ use sp_runtime::{
 
 /// Type of weight that refers to 'ref_time' in Weight struct
 pub type VoteWeight = u64;
+pub const WEIGHT_FACTOR: u64 = 1;
 #[derive(Encode, Decode, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
 pub struct Vote<AccountId> {
@@ -75,19 +76,20 @@ impl<T: Config> CheckVote<T> {
 	) -> Result<(), TransactionValidityError> {
 		match candidate {
 			Some(c) => {
-				let new_weight = {
+				let adjusted_weight = Self::adjust_weight(dispatch_weight);
+				let weight = {
 					if let Some(stored_weight) = VoteInfo::<T>::get(&c) {
-						// Add stored_weig
-						dispatch_weight.saturating_add(stored_weight)
+						// Add stored_weight
+						adjusted_weight.saturating_add(stored_weight)
 					} else {
-						dispatch_weight
+						adjusted_weight
 					}
 				};
 
-				VoteInfo::<T>::insert(&c, new_weight);
+				VoteInfo::<T>::insert(&c, weight);
 				Pallet::<T>::deposit_event(Event::VoteCollected {
 					candidate: c.clone(),
-					weight: new_weight,
+					weight
 				});
 
 				return Ok(())
@@ -101,10 +103,9 @@ impl<T: Config> CheckVote<T> {
 
 	/// Weight would be modified based on the block number
 	pub fn adjust_weight(
-		_weight: &mut VoteWeight,
-		_genesis_block: BlockNumberFor<T>,
-		_current_block: BlockNumberFor<T>,
-	) {
+		weight: VoteWeight,
+	) -> VoteWeight {
+		weight * WEIGHT_FACTOR
 	}
 }
 
