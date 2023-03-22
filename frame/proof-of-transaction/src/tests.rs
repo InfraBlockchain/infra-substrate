@@ -1,11 +1,10 @@
 
 use super::*;
-use crate as pallet_pot;
 use frame_support::{
-    assert_noop, assert_ok,
+    assert_ok,
     weights::Weight,
 };
-use mock::*;
+use mock::{*, RuntimeEvent as TestEvent};
 
 struct ExtBuilder {
     balance_factor: u64,
@@ -55,6 +54,9 @@ fn signed_extension_works() {
     ExtBuilder::default()
         .build()
         .execute_with(|| {
+            // To emit event
+            System::set_block_number(1);
+
             let caller = 1;
             let whom_to_vote = 1;
             let len = 10;
@@ -81,6 +83,22 @@ fn signed_extension_works() {
             assert_eq!(
                 weight,
                 5
-            )
+            );
+            System::assert_has_event(TestEvent::Pot(Event::VoteCollected { candidate: 1, weight: 5 }));
+
+            // No vote is inside extrinsic
+            let pre = CheckVote::<TestRuntime>::from(None)
+                .pre_dispatch(&1, &CALL, &info, len)
+                .unwrap();
+            assert_ok!(
+                CheckVote::<TestRuntime>::post_dispatch(
+                    Some(pre), 
+                    &info, 
+                    post_info, 
+                    len, 
+                    &Ok(())
+                )
+            );
+            System::assert_has_event(TestEvent::Pot(Event::NoVote));
         })
 }
