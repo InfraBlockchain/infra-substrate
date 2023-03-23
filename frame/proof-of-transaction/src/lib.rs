@@ -18,6 +18,8 @@ use sp_runtime::{
 	transaction_validity::{TransactionValidity, TransactionValidityError, ValidTransaction},
 };
 
+use sp_api::decl_runtime_apis;
+
 /// Type of weight that refers to 'ref_time' in Weight struct
 pub type VoteWeight = u64;
 
@@ -56,6 +58,12 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		VoteCollected { candidate: T::AccountId, weight: VoteWeight },
 		NoVote,
+	}
+
+	impl<T: Config> Pallet<T> {
+		pub fn test_collect_vote() -> u64 {
+			5 + 5
+		}
 	}
 }
 
@@ -164,5 +172,13 @@ impl<T: Config> sp_std::fmt::Debug for CheckVote<T> {
 	#[cfg(not(feature = "std"))]
 	fn fmt(&self, _: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
 		Ok(())
+	}
+}
+
+sp_api::decl_runtime_apis! {
+	#[api_version(3)]
+	pub trait CollectVotingApi<AccountId>
+	{
+		fn test_collect_vote() -> u64;
 	}
 }
