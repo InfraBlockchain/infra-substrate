@@ -1,9 +1,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(test)]
-mod tests;
-#[cfg(test)]
 mod mock;
+#[cfg(test)]
+mod tests;
 
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
@@ -62,11 +62,8 @@ pub struct CheckVote<T: Config> {
 }
 
 impl<T: Config> CheckVote<T> {
-
 	pub fn from(candidate: Option<T::AccountId>) -> Self {
-		Self {
-			candidate
-		}
+		Self { candidate }
 	}
 
 	/// Collect vote from extrinsic and update the state
@@ -87,10 +84,7 @@ impl<T: Config> CheckVote<T> {
 				};
 
 				VoteInfo::<T>::insert(&c, weight);
-				Pallet::<T>::deposit_event(Event::VoteCollected {
-					candidate: c.clone(),
-					weight
-				});
+				Pallet::<T>::deposit_event(Event::VoteCollected { candidate: c.clone(), weight });
 
 				return Ok(())
 			},
@@ -102,9 +96,7 @@ impl<T: Config> CheckVote<T> {
 	}
 
 	/// Weight would be modified based on the block number
-	pub fn adjust_weight(
-		weight: VoteWeight,
-	) -> VoteWeight {
+	pub fn adjust_weight(weight: VoteWeight) -> VoteWeight {
 		weight * WEIGHT_FACTOR
 	}
 }

@@ -1,42 +1,34 @@
-
-use super::*; 
+use super::*;
 use crate as pallet_pot;
 
+use frame_support::{parameter_types, traits::ConstU64};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
-	traits::{IdentityLookup, BlakeTwo256},
-};
-use frame_support::{
-	parameter_types,
-	traits::ConstU64,
+	traits::{BlakeTwo256, IdentityLookup},
 };
 type SignedExtra = pallet_pot::CheckVote<TestRuntime>;
 
 type MockBlock = frame_system::mocking::MockBlock<TestRuntime>;
-type MockUxt = frame_system::mocking::MockUncheckedExtrinsic<
-	TestRuntime, 
-	(), 
-	SignedExtra
->;
+type MockUxt = frame_system::mocking::MockUncheckedExtrinsic<TestRuntime, (), SignedExtra>;
 type BalancesCall = pallet_balances::Call<TestRuntime>;
-pub(crate) const CALL: <TestRuntime as frame_system::Config>::RuntimeCall = 
+pub(crate) const CALL: <TestRuntime as frame_system::Config>::RuntimeCall =
 	RuntimeCall::Balances(BalancesCall::transfer { dest: 2, value: 10 });
 
 frame_support::construct_runtime!(
-    pub enum TestRuntime where
-        Block = MockBlock,
-        NodeBlock = MockBlock,
-        UncheckedExtrinsic = MockUxt,
-    {
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-        Pot: pallet_pot::{Pallet, Storage, Event<T>}
-    }
+	pub enum TestRuntime where
+		Block = MockBlock,
+		NodeBlock = MockBlock,
+		UncheckedExtrinsic = MockUxt,
+	{
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+		Pot: pallet_pot::{Pallet, Storage, Event<T>}
+	}
 );
 
 impl frame_system::Config for TestRuntime {
-    type BaseCallFilter = frame_support::traits::Everything;
+	type BaseCallFilter = frame_support::traits::Everything;
 	type BlockWeights = BlockWeights;
 	type BlockLength = ();
 	type DbWeight = ();
