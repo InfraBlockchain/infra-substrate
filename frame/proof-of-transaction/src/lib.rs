@@ -1,11 +1,16 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;
+
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
 	dispatch::{DispatchInfo, PostDispatchInfo},
 	pallet_prelude::*,
 };
-use frame_system::pallet_prelude::BlockNumberFor;
+// use frame_system::pallet_prelude::BlockNumberFor;
 pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_runtime::{
@@ -15,6 +20,7 @@ use sp_runtime::{
 
 /// Type of weight that refers to 'ref_time' in Weight struct
 pub type VoteWeight = u64;
+
 #[derive(Encode, Decode, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
 pub struct Vote<AccountId> {
@@ -34,6 +40,10 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+
+		/// To adjust weight based on the time period
+		#[pallet::constant]
+		type WeightFactor: Get<u64>;
 	}
 
 	/// Store vote information for each certain account
@@ -51,13 +61,13 @@ pub mod pallet {
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo)]
 #[scale_info(skip_type_params(T))]
-pub struct CollectVote<T: Config> {
+pub struct CheckVote<T: Config> {
 	candidate: Option<T::AccountId>,
 }
 
-impl<T: Config> CollectVote<T> {
-	pub fn new() -> Self {
-		Self { candidate: None }
+impl<T: Config> CheckVote<T> {
+	pub fn from(candidate: Option<T::AccountId>) -> Self {
+		Self { candidate }
 	}
 
 	/// Collect vote from extrinsic and update the state
@@ -67,20 +77,18 @@ impl<T: Config> CollectVote<T> {
 	) -> Result<(), TransactionValidityError> {
 		match candidate {
 			Some(c) => {
-				let new_weight = {
+				let adjusted_weight = Self::adjust_weight(dispatch_weight);
+				let weight = {
 					if let Some(stored_weight) = VoteInfo::<T>::get(&c) {
-						// Add stored_weig
-						dispatch_weight.saturating_add(stored_weight)
+						// Add stored_weight
+						adjusted_weight.saturating_add(stored_weight)
 					} else {
-						dispatch_weight
+						adjusted_weight
 					}
 				};
 
-				VoteInfo::<T>::insert(&c, new_weight);
-				Pallet::<T>::deposit_event(Event::VoteCollected {
-					candidate: c.clone(),
-					weight: new_weight,
-				});
+				VoteInfo::<T>::insert(&c, weight);
+				Pallet::<T>::deposit_event(Event::VoteCollected { candidate: c.clone(), weight });
 
 				return Ok(())
 			},
@@ -92,15 +100,12 @@ impl<T: Config> CollectVote<T> {
 	}
 
 	/// Weight would be modified based on the block number
-	pub fn adjust_weight(
-		_weight: &mut VoteWeight,
-		_genesis_block: BlockNumberFor<T>,
-		_current_block: BlockNumberFor<T>,
-	) {
+	pub fn adjust_weight(weight: VoteWeight) -> VoteWeight {
+		weight * T::WeightFactor::get()
 	}
 }
 
-impl<T: Config> SignedExtension for CollectVote<T>
+impl<T: Config> SignedExtension for CheckVote<T>
 where
 	T::RuntimeCall: Dispatchable<Info = DispatchInfo, PostInfo = PostDispatchInfo>,
 {
@@ -150,7 +155,7 @@ where
 	}
 }
 
-impl<T: Config> sp_std::fmt::Debug for CollectVote<T> {
+impl<T: Config> sp_std::fmt::Debug for CheckVote<T> {
 	#[cfg(feature = "std")]
 	fn fmt(&self, f: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
 		write!(f, "Vote to {:?}", self.candidate)
