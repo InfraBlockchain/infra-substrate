@@ -20,7 +20,7 @@ use sp_runtime::{
 
 /// Type of weight that refers to 'ref_time' in Weight struct
 pub type VoteWeight = u64;
-pub const WEIGHT_FACTOR: u64 = 1;
+
 #[derive(Encode, Decode, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
 pub struct Vote<AccountId> {
@@ -40,6 +40,10 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+
+		/// To adjust weight based on the time period
+		#[pallet::constant]
+		type WeightFactor: Get<u64>;
 	}
 
 	/// Store vote information for each certain account
@@ -97,7 +101,7 @@ impl<T: Config> CheckVote<T> {
 
 	/// Weight would be modified based on the block number
 	pub fn adjust_weight(weight: VoteWeight) -> VoteWeight {
-		weight * WEIGHT_FACTOR
+		weight * T::WeightFactor::get()
 	}
 }
 

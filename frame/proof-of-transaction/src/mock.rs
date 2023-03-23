@@ -85,6 +85,11 @@ impl pallet_balances::Config for TestRuntime {
 	type WeightInfo = ();
 }
 
+parameter_types! {
+	pub static WeightFactor: u64 = 1;
+}
+
 impl Config for TestRuntime {
 	type RuntimeEvent = RuntimeEvent;
+	type WeightFactor = WeightFactor;
 }
