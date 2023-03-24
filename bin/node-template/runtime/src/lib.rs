@@ -475,11 +475,12 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl pallet_pot::CollectVotingApi for Runtime {
-		fn test_collect_vote() -> u32 {
-			pallet_pot::
+	impl pallet_pot::ProofOfTransactionAPI<Block, AccountId> for Runtime {
+		fn get_vote_info(account: AccountId) -> Vec<(AccountId, u64)> {
+			pallet_pot::Pallet::<Runtime>::get_vote_info(account)
 		}
 	}
+
 
 	impl pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance> for Runtime {
 		fn query_info(

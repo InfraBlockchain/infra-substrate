@@ -6,11 +6,12 @@ mod mock;
 mod tests;
 
 use codec::{Decode, Encode, MaxEncodedLen};
+
 use frame_support::{
 	dispatch::{DispatchInfo, PostDispatchInfo},
 	pallet_prelude::*,
 };
-// use frame_system::pallet_prelude::BlockNumberFor;
+
 pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_runtime::{
@@ -18,7 +19,7 @@ use sp_runtime::{
 	transaction_validity::{TransactionValidity, TransactionValidityError, ValidTransaction},
 };
 
-use sp_api::decl_runtime_apis;
+use sp_std::vec::Vec;
 
 /// Type of weight that refers to 'ref_time' in Weight struct
 pub type VoteWeight = u64;
@@ -61,8 +62,8 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		pub fn test_collect_vote() -> u64 {
-			5 + 5
+		pub fn get_vote_info(account: T::AccountId) -> Vec<(T::AccountId, VoteWeight)> {
+			VoteInfo::<T>::iter().collect::<Vec<(T::AccountId, VoteWeight)>>()
 		}
 	}
 }
@@ -177,8 +178,9 @@ impl<T: Config> sp_std::fmt::Debug for CheckVote<T> {
 
 sp_api::decl_runtime_apis! {
 	#[api_version(3)]
-	pub trait CollectVotingApi<AccountId>
+	pub trait ProofOfTransactionAPI<AccountId> where
+	AccountId: codec::Codec,
 	{
-		fn test_collect_vote() -> u64;
+		fn get_vote_info(account: AccountId) -> Vec<(AccountId, u64)>;
 	}
 }
