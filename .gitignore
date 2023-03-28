@@ -19,6 +19,7 @@ rls*.log
 *.rej
 **/wip/*.stderr
 .local
+Cargo.lock
 **/hfuzz_target/
 **/hfuzz_workspace/
 .cargo-remote.toml

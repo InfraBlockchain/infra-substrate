@@ -19,9 +19,13 @@ use sp_runtime::{
 	transaction_validity::{TransactionValidity, TransactionValidityError, ValidTransaction},
 };
 
+// use sp_runtime::traits::{Bounded, Hash, StaticLookup};
+use sp_std::{convert::TryInto, prelude::*};
+
+use frame_support::BoundedVec;
+
 use sp_std::vec::Vec;
 
-/// Type of weight that refers to 'ref_time' in Weight struct
 pub type VoteWeight = u64;
 
 #[derive(Encode, Decode, TypeInfo, MaxEncodedLen)]
@@ -44,9 +48,21 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
+		#[pallet::constant]
+		type MaxValidators: Get<u32>;
+
 		/// To adjust weight based on the time period
 		#[pallet::constant]
 		type WeightFactor: Get<u64>;
+	}
+
+	/// Error for the PoT pallet.
+	#[pallet::error]
+	pub enum Error<T> {
+		/// # of Valdators are too large.
+		TooLarge,
+		/// # of Valdators are too small.
+		TooSmall,
 	}
 
 	/// Store vote information for each certain account
@@ -60,11 +76,16 @@ pub mod pallet {
 		VoteCollected { candidate: T::AccountId, weight: VoteWeight },
 		NoVote,
 	}
+}
 
-	impl<T: Config> Pallet<T> {
-		pub fn get_vote_info(account: T::AccountId) -> Vec<(T::AccountId, VoteWeight)> {
-			VoteInfo::<T>::iter().collect::<Vec<(T::AccountId, VoteWeight)>>()
-		}
+impl<T: Config> Pallet<T> {
+	pub fn get_vote_info() -> BoundedVec<(T::AccountId, VoteWeight), T::MaxValidators> {
+		let vote_vec = VoteInfo::<T>::iter().collect::<Vec<(T::AccountId, VoteWeight)>>();
+
+		let vote_bounded: BoundedVec<(T::AccountId, VoteWeight), T::MaxValidators> =
+			vote_vec.try_into().expect("exceeded the # of validators available to vote.");
+
+		vote_bounded
 	}
 }
 
@@ -173,14 +194,5 @@ impl<T: Config> sp_std::fmt::Debug for CheckVote<T> {
 	#[cfg(not(feature = "std"))]
 	fn fmt(&self, _: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
 		Ok(())
-	}
-}
-
-sp_api::decl_runtime_apis! {
-	#[api_version(3)]
-	pub trait ProofOfTransactionAPI<AccountId> where
-	AccountId: codec::Codec,
-	{
-		fn get_vote_info(account: AccountId) -> Vec<(AccountId, u64)>;
 	}
 }
