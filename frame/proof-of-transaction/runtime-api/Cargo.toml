@@ -13,15 +13,14 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 pallet-pot = { version = "0.1.0", default-features = false, path = "../" }
-codec = { package = "parity-scale-codec", version = "3.2.2", default-features = false, features = ["derive"] }
-scale-info = { version = "2.1.1", default-features = false, features = [
+codec = { package = "parity-scale-codec", version = "3.2.2", default-features = false, features = [
     "derive",
 ] }
+scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 sp-api = { version = "4.0.0-dev", default-features = false, path = "../../../primitives/api" }
 sp-std = { version = "5.0.0", default-features = false, path = "../../../primitives/std" }
 sp-runtime = { version = "7.0.0", default-features = false, path = "../../../primitives/runtime" }
 frame-support = { version = "4.0.0-dev", default-features = false, path = "../../support" }
-
 bounded-collections = { version = "0.1.4", default-features = false }
 
 

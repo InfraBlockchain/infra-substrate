@@ -23,9 +23,9 @@ use frame_support::{traits::Get, BoundedVec};
 
 sp_api::decl_runtime_apis! {
 	#[api_version(3)]
-	pub trait ProofOfTransactionAPI<AccountId, MaxValidators: Get<u32>> where
+	pub trait ProofOfTransactionAPI<AccountId, MaxVotedValidators: Get<u32>> where
 		AccountId: codec::Codec,
 	{
-		fn get_vote_info() -> BoundedVec<(AccountId, u64), MaxValidators>;
+		fn get_vote_info() -> BoundedVec<(AccountId, u64), MaxVotedValidators>;
 	}
 }

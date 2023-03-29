@@ -10,6 +10,7 @@ use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
 	dispatch::{DispatchInfo, PostDispatchInfo},
 	pallet_prelude::*,
+	BoundedVec,
 };
 
 pub use pallet::*;
@@ -19,12 +20,7 @@ use sp_runtime::{
 	transaction_validity::{TransactionValidity, TransactionValidityError, ValidTransaction},
 };
 
-// use sp_runtime::traits::{Bounded, Hash, StaticLookup};
-use sp_std::{convert::TryInto, prelude::*};
-
-use frame_support::BoundedVec;
-
-use sp_std::vec::Vec;
+use sp_std::{convert::TryInto, prelude::*, vec::Vec};
 
 pub type VoteWeight = u64;
 
@@ -49,26 +45,21 @@ pub mod pallet {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		#[pallet::constant]
-		type MaxValidators: Get<u32>;
+		type MaxVotedValidators: Get<u32>;
 
 		/// To adjust weight based on the time period
 		#[pallet::constant]
 		type WeightFactor: Get<u64>;
 	}
 
-	/// Error for the PoT pallet.
-	#[pallet::error]
-	pub enum Error<T> {
-		/// # of Valdators are too large.
-		TooLarge,
-		/// # of Valdators are too small.
-		TooSmall,
-	}
-
 	/// Store vote information for each certain account
 	#[pallet::storage]
 	pub type VoteInfo<T: Config> =
 		StorageMap<_, Twox64Concat, T::AccountId, VoteWeight, OptionQuery>;
+
+	#[pallet::storage]
+	pub type VoteInfoCount<T: Config> =
+		CountedStorageMap<_, Twox64Concat, T::AccountId, VoteWeight>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -79,13 +70,18 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-	pub fn get_vote_info() -> BoundedVec<(T::AccountId, VoteWeight), T::MaxValidators> {
-		let vote_vec = VoteInfo::<T>::iter().collect::<Vec<(T::AccountId, VoteWeight)>>();
+	/// Runtime-api fn to return and change the collected VoteInfo as a BoundedVec
+	pub fn get_vote_info() -> BoundedVec<(T::AccountId, VoteWeight), T::MaxVotedValidators> {
+		let vote_vec = VoteInfoCount::<T>::iter().collect::<Vec<(T::AccountId, VoteWeight)>>();
 
-		let vote_bounded: BoundedVec<(T::AccountId, VoteWeight), T::MaxValidators> =
+		let vote_bounded: BoundedVec<(T::AccountId, VoteWeight), T::MaxVotedValidators> =
 			vote_vec.try_into().expect("exceeded the # of validators available to vote.");
 
 		vote_bounded
+	}
+
+	pub fn get_max_voted_validators() -> u32 {
+		T::MaxVotedValidators::get()
 	}
 }
 
@@ -107,9 +103,14 @@ impl<T: Config> CheckVote<T> {
 	) -> Result<(), TransactionValidityError> {
 		match candidate {
 			Some(c) => {
+				let max_validators = Pallet::<T>::get_max_voted_validators();
+				if VoteInfoCount::<T>::count() >= max_validators {
+					return Err(TransactionValidityError::Invalid(InvalidTransaction::Stale))
+				}
+
 				let adjusted_weight = Self::adjust_weight(dispatch_weight);
 				let weight = {
-					if let Some(stored_weight) = VoteInfo::<T>::get(&c) {
+					if let Some(stored_weight) = VoteInfoCount::<T>::get(&c) {
 						// Add stored_weight
 						adjusted_weight.saturating_add(stored_weight)
 					} else {
@@ -117,7 +118,7 @@ impl<T: Config> CheckVote<T> {
 					}
 				};
 
-				VoteInfo::<T>::insert(&c, weight);
+				VoteInfoCount::<T>::insert(&c, weight);
 				Pallet::<T>::deposit_event(Event::VoteCollected { candidate: c.clone(), weight });
 
 				return Ok(())
