@@ -60,8 +60,8 @@ fn signed_extension_works() {
 			len,
 			&Ok(())
 		));
-		assert!(VoteInfoCount::<TestRuntime>::contains_key(&1));
-		let weight = VoteInfoCount::<TestRuntime>::get(&1).unwrap();
+		assert!(VoteInfo::<TestRuntime>::contains_key(&1));
+		let weight = VoteInfo::<TestRuntime>::get(&1).unwrap();
 		assert_eq!(weight, 5);
 		System::assert_has_event(TestEvent::Pot(Event::VoteCollected { candidate: 1, weight: 5 }));
 
@@ -81,7 +81,7 @@ fn signed_extension_works() {
 }
 
 #[test]
-// #[should_panic]
+#[should_panic]
 fn collect_vote_for_should_fail() {
 	ExtBuilder::default().build().execute_with(|| {
 		System::set_block_number(1);
