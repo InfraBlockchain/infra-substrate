@@ -1,0 +1,36 @@
+[package]
+name = "proof-of-transaction-runtime-api"
+version = "0.1.0"
+authors = ["Blockchain Labs"]
+edition = "2021"
+license = "Apache-2.0"
+homepage = "https://bc-labs.net"
+repository = "https://github.com/InfraBlockchain/infra-substrate/"
+description = "RPC runtime API for PoT pallet"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+pallet-pot = { version = "0.1.0", default-features = false, path = "../" }
+codec = { package = "parity-scale-codec", version = "3.2.2", default-features = false, features = [
+    "derive",
+] }
+scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
+sp-api = { version = "4.0.0-dev", default-features = false, path = "../../../primitives/api" }
+sp-std = { version = "5.0.0", default-features = false, path = "../../../primitives/std" }
+sp-runtime = { version = "7.0.0", default-features = false, path = "../../../primitives/runtime" }
+frame-support = { version = "4.0.0-dev", default-features = false, path = "../../support" }
+bounded-collections = { version = "0.1.4", default-features = false }
+
+
+[features]
+default = ["std"]
+std = [
+    "scale-info/std",
+    "codec/std",
+    "sp-api/std",
+    "sp-std/std",
+    "sp-runtime/std",
+    "frame-support/std",
+]

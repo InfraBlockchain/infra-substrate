@@ -28,11 +28,11 @@ pallet-timestamp = { version = "4.0.0-dev", default-features = false, path = "..
 pallet-transaction-payment = { version = "4.0.0-dev", default-features = false, path = "../../../frame/transaction-payment" }
 frame-executive = { version = "4.0.0-dev", default-features = false, path = "../../../frame/executive" }
 sp-api = { version = "4.0.0-dev", default-features = false, path = "../../../primitives/api" }
-sp-block-builder = { version = "4.0.0-dev", default-features = false, path = "../../../primitives/block-builder"}
+sp-block-builder = { version = "4.0.0-dev", default-features = false, path = "../../../primitives/block-builder" }
 sp-consensus-aura = { version = "0.10.0-dev", default-features = false, path = "../../../primitives/consensus/aura" }
 sp-consensus-grandpa = { version = "4.0.0-dev", default-features = false, path = "../../../primitives/consensus/grandpa" }
 sp-core = { version = "7.0.0", default-features = false, path = "../../../primitives/core" }
-sp-inherents = { version = "4.0.0-dev", default-features = false, path = "../../../primitives/inherents"}
+sp-inherents = { version = "4.0.0-dev", default-features = false, path = "../../../primitives/inherents" }
 sp-offchain = { version = "4.0.0-dev", default-features = false, path = "../../../primitives/offchain" }
 sp-runtime = { version = "7.0.0", default-features = false, path = "../../../primitives/runtime" }
 sp-session = { version = "4.0.0-dev", default-features = false, path = "../../../primitives/session" }
@@ -41,6 +41,7 @@ sp-transaction-pool = { version = "4.0.0-dev", default-features = false, path = 
 sp-version = { version = "5.0.0", default-features = false, path = "../../../primitives/version" }
 
 # Used for the node template's RPCs
+proof-of-transaction-runtime-api = { version = "0.1.0", default-features = false, path = "../../../frame/proof-of-transaction/runtime-api/" }
 frame-system-rpc-runtime-api = { version = "4.0.0-dev", default-features = false, path = "../../../frame/system/rpc/runtime-api/" }
 pallet-transaction-payment-rpc-runtime-api = { version = "4.0.0-dev", default-features = false, path = "../../../frame/transaction-payment/rpc/runtime-api/" }
 
@@ -70,6 +71,7 @@ std = [
 	"frame-system-rpc-runtime-api/std",
 	"frame-system/std",
 	"frame-try-runtime/std",
+	"proof-of-transaction-runtime-api/std",
 	"pallet-aura/std",
 	"pallet-balances/std",
 	"pallet-grandpa/std",

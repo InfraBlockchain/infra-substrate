@@ -79,3 +79,32 @@ fn signed_extension_works() {
 		System::assert_has_event(TestEvent::Pot(Event::NoVote));
 	})
 }
+
+#[test]
+#[should_panic]
+fn collect_vote_for_should_fail() {
+	ExtBuilder::default().build().execute_with(|| {
+		System::set_block_number(1);
+
+		let max_validators: u64 = Pot::get_max_voted_validators().into();
+
+		for val in 0..=max_validators {
+			let caller = val;
+			let whom_to_vote = val;
+			let len = 10;
+			let info = info_from_weight(Weight::from_parts(5, 0));
+			let pre = CheckVote::<TestRuntime>::from(Some(whom_to_vote))
+				.pre_dispatch(&caller, &CALL, &info, len)
+				.unwrap();
+
+			let post_info = &default_post_info();
+			assert_ok!(CheckVote::<TestRuntime>::post_dispatch(
+				Some(pre),
+				&info,
+				post_info,
+				len,
+				&Ok(())
+			));
+		}
+	})
+}

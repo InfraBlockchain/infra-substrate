@@ -36,7 +36,7 @@ pub use frame_support::{
 		},
 		IdentityFee, Weight,
 	},
-	StorageValue,
+	BoundedVec, StorageValue,
 };
 pub use frame_system::Call as SystemCall;
 pub use pallet_balances::Call as BalancesCall;
@@ -282,11 +282,13 @@ impl pallet_template::Config for Runtime {
 
 parameter_types! {
 	pub WeightFactor: VoteWeight = 1;
+	pub MaxVotedValidators: u32 = 1024;
 }
 
 impl pallet_pot::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightFactor = WeightFactor;
+	type MaxVotedValidators = MaxVotedValidators;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -474,6 +476,13 @@ impl_runtime_apis! {
 			System::account_nonce(account)
 		}
 	}
+
+	impl proof_of_transaction_runtime_api::ProofOfTransactionAPI<Block, AccountId, <Runtime as pallet_pot::Config>::MaxVotedValidators> for Runtime {
+		fn get_vote_info() -> BoundedVec<(AccountId, u64), MaxVotedValidators> {
+			pallet_pot::Pallet::<Runtime>::get_vote_info()
+		}
+	}
+
 
 	impl pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance> for Runtime {
 		fn query_info(
