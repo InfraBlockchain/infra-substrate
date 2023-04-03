@@ -36,7 +36,7 @@ pub use frame_support::{
 		},
 		IdentityFee, Weight,
 	},
-	BoundedVec, StorageValue,
+	StorageValue,
 };
 pub use frame_system::Call as SystemCall;
 pub use pallet_balances::Call as BalancesCall;
@@ -477,8 +477,8 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl proof_of_transaction_runtime_api::ProofOfTransactionAPI<Block, AccountId, <Runtime as pallet_pot::Config>::MaxVotedValidators> for Runtime {
-		fn get_vote_info() -> BoundedVec<(AccountId, u64), MaxVotedValidators> {
+	impl proof_of_transaction_runtime_api::ProofOfTransactionAPI<Block, AccountId> for Runtime {
+		fn get_vote_info() -> Vec<(AccountId, VoteWeight)> {
 			pallet_pot::Pallet::<Runtime>::get_vote_info()
 		}
 	}
