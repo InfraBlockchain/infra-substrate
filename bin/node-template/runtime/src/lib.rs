@@ -477,7 +477,7 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl proof_of_transaction_runtime_api::ProofOfTransactionAPI<Block, AccountId> for Runtime {
+	impl pot_runtime_api::PoTApi<Block, AccountId> for Runtime {
 		fn get_vote_info() -> Vec<(AccountId, VoteWeight)> {
 			pallet_pot::Pallet::<Runtime>::get_vote_info()
 		}

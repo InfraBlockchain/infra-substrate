@@ -18,10 +18,11 @@
 //! Runtime API definition for the Proof of transaction pallet.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+use sp_std::vec::Vec;
 
 sp_api::decl_runtime_apis! {
 	#[api_version(3)]
-	pub trait ProofOfTransactionAPI<AccountId> where
+	pub trait PoTApi<AccountId> where
 		AccountId: codec::Codec,
 	{
 		fn get_vote_info() -> Vec<(AccountId, u64)>;

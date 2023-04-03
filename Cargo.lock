@@ -5105,7 +5105,7 @@ dependencies = [
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
  "parity-scale-codec",
- "proof-of-transaction-runtime-api",
+ "pot-runtime-api",
  "scale-info",
  "sp-api",
  "sp-block-builder",
@@ -7270,6 +7270,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "pot-runtime-api"
+version = "0.1.0"
+dependencies = [
+ "bounded-collections",
+ "frame-support",
+ "pallet-pot",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-api",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "ppv-lite86"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7418,20 +7432,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "proof-of-transaction-runtime-api"
-version = "0.1.0"
-dependencies = [
- "bounded-collections",
- "frame-support",
- "pallet-pot",
- "parity-scale-codec",
- "scale-info",
- "sp-api",
- "sp-runtime",
- "sp-std",
 ]
 
 [[package]]

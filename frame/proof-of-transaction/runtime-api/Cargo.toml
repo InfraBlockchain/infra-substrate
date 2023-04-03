@@ -1,5 +1,5 @@
 [package]
-name = "proof-of-transaction-runtime-api"
+name = "pot-runtime-api"
 version = "0.1.0"
 authors = ["Blockchain Labs"]
 edition = "2021"
