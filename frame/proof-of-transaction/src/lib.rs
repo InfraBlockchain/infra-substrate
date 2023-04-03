@@ -10,7 +10,6 @@ use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
 	dispatch::{DispatchInfo, PostDispatchInfo},
 	pallet_prelude::*,
-	BoundedVec,
 };
 
 pub use pallet::*;
@@ -20,7 +19,7 @@ use sp_runtime::{
 	transaction_validity::{TransactionValidity, TransactionValidityError, ValidTransaction},
 };
 
-use sp_std::{convert::TryInto, prelude::*, vec::Vec};
+use sp_std::{prelude::*, vec::Vec};
 
 pub type VoteWeight = u64;
 
@@ -73,14 +72,11 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-	/// Runtime-api fn to return and change the collected VoteInfo as a BoundedVec
-	pub fn get_vote_info() -> BoundedVec<(T::AccountId, VoteWeight), T::MaxVotedValidators> {
+	/// Runtime-api fn to return the collected VoteInfo as a Vec
+	pub fn get_vote_info() -> Vec<(T::AccountId, VoteWeight)> {
 		let vote_vec = VoteInfo::<T>::iter().collect::<Vec<(T::AccountId, VoteWeight)>>();
 
-		let vote_bounded: BoundedVec<(T::AccountId, VoteWeight), T::MaxVotedValidators> =
-			vote_vec.try_into().expect("exceeded the # of validators available to vote.");
-
-		vote_bounded
+		vote_vec
 	}
 
 	pub fn get_max_voted_validators() -> u32 {

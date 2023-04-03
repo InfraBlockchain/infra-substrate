@@ -19,13 +19,11 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{traits::Get, BoundedVec};
-
 sp_api::decl_runtime_apis! {
 	#[api_version(3)]
-	pub trait ProofOfTransactionAPI<AccountId, MaxVotedValidators: Get<u32>> where
+	pub trait ProofOfTransactionAPI<AccountId> where
 		AccountId: codec::Codec,
 	{
-		fn get_vote_info() -> BoundedVec<(AccountId, u64), MaxVotedValidators>;
+		fn get_vote_info() -> Vec<(AccountId, u64)>;
 	}
 }
