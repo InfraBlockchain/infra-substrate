@@ -22,7 +22,6 @@ use sp_std::vec::Vec;
 use pallet_pot::VoteWeight;
 
 sp_api::decl_runtime_apis! {
-	#[api_version(3)]
 	pub trait PoTApi<AccountId> where
 		AccountId: codec::Codec,
 	{
