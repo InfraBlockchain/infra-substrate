@@ -19,12 +19,13 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 use sp_std::vec::Vec;
+use pallet_pot::VoteWeight;
 
 sp_api::decl_runtime_apis! {
 	#[api_version(3)]
 	pub trait PoTApi<AccountId> where
 		AccountId: codec::Codec,
 	{
-		fn get_vote_info() -> Vec<(AccountId, u64)>;
+		fn get_vote_info() -> Vec<(AccountId, VoteWeight)>;
 	}
 }
