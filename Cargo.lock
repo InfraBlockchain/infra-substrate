@@ -5049,7 +5049,6 @@ dependencies = [
  "futures",
  "jsonrpsee",
  "node-template-runtime",
- "pallet-pot",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc",
  "sc-basic-authorship",
@@ -5098,14 +5097,12 @@ dependencies = [
  "pallet-balances",
  "pallet-grandpa",
  "pallet-insecure-randomness-collective-flip",
- "pallet-pot",
  "pallet-sudo",
  "pallet-template",
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
  "parity-scale-codec",
- "pot-runtime-api",
  "scale-info",
  "sp-api",
  "sp-block-builder",
@@ -6337,22 +6334,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-pot"
-version = "0.1.0"
-dependencies = [
- "frame-support",
- "frame-system",
- "pallet-balances",
- "parity-scale-codec",
- "scale-info",
- "sp-api",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "pallet-preimage"
 version = "4.0.0-dev"
 dependencies = [
@@ -7267,20 +7248,6 @@ dependencies = [
  "cpufeatures",
  "opaque-debug 0.3.0",
  "universal-hash 0.5.0",
-]
-
-[[package]]
-name = "pot-runtime-api"
-version = "0.1.0"
-dependencies = [
- "bounded-collections",
- "frame-support",
- "pallet-pot",
- "parity-scale-codec",
- "scale-info",
- "sp-api",
- "sp-runtime",
- "sp-std",
 ]
 
 [[package]]

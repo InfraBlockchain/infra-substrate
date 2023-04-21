@@ -7,7 +7,6 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use pallet_grandpa::AuthorityId as GrandpaId;
-use pallet_pot::VoteWeight;
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
@@ -280,17 +279,6 @@ impl pallet_template::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 }
 
-parameter_types! {
-	pub WeightFactor: VoteWeight = 1;
-	pub MaxVotedValidators: u32 = 1024;
-}
-
-impl pallet_pot::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type WeightFactor = WeightFactor;
-	type MaxVotedValidators = MaxVotedValidators;
-}
-
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub struct Runtime
@@ -309,7 +297,6 @@ construct_runtime!(
 		Sudo: pallet_sudo,
 		// Include the custom logic from the pallet-template in the runtime.
 		TemplateModule: pallet_template,
-		Pot: pallet_pot,
 	}
 );
 
@@ -329,7 +316,6 @@ pub type SignedExtra = (
 	frame_system::CheckNonce<Runtime>,
 	frame_system::CheckWeight<Runtime>,
 	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
-	pallet_pot::CheckVote<Runtime>,
 );
 
 /// Unchecked extrinsic type as expected by this runtime.
@@ -476,13 +462,6 @@ impl_runtime_apis! {
 			System::account_nonce(account)
 		}
 	}
-
-	impl pot_runtime_api::PoTApi<Block, AccountId> for Runtime {
-		fn get_vote_info() -> Vec<(AccountId, VoteWeight)> {
-			pallet_pot::Pallet::<Runtime>::get_vote_info()
-		}
-	}
-
 
 	impl pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance> for Runtime {
 		fn query_info(
