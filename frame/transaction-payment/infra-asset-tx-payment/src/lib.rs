@@ -17,6 +17,11 @@
 
 use sp_std::prelude::*;
 
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;
+
 use codec::{Decode, Encode};
 use frame_support::{
 	dispatch::{DispatchInfo, DispatchResult, PostDispatchInfo},
@@ -115,6 +120,7 @@ pub mod pallet {
 			actual_fee: AssetBalanceOf<T>,
 			tip: AssetBalanceOf<T>,
 			asset_id: Option<ChargeAssetIdOf<T>>,
+			vote_info: Option<VoteInfo<T>>,
 		},
 	}
 }
@@ -241,7 +247,13 @@ where
 		len: usize,
 	) -> TransactionValidity {
 		use pallet_transaction_payment::ChargeTransactionPayment;
-		let (fee, _) = self.withdraw_fee(who, call, info, len)?;
+		let payer = if let Some(pay_master) = self.pay_master {
+			pay_master
+		} else {
+			// if pay_master is not set, then the signer of the transaction is the payer
+			who.clone()
+		};
+		let (fee, _) = self.withdraw_fee(&payer, call, info, len)?;
 		let priority = ChargeTransactionPayment::<T>::get_priority(info, len, self.tip, fee);
 		Ok(ValidTransaction { priority, ..Default::default() })
 	}
@@ -301,6 +313,7 @@ where
 						actual_fee: converted_fee,
 						tip: converted_tip,
 						asset_id,
+						vote_info: vote_info.clone(),
 					});
 				},
 				InitialPayment::Nothing => {
