@@ -1,8 +1,7 @@
 use super::tokens::fungibles;
-
-pub type VoteInfo<AccountId, AssetId, VoteWeight> = (AccountId, AssetId, VoteWeight);
+use crate::sp_runtime::generic::{VoteAssetId, VoteWeight};
 
 /// An interface for dealing with vote info
-pub trait VoteInfoHandler<AccountId, F: fungibles::Inspect<AccountId>> {
-	fn update_vote_info(who: AccountId, asset_id: F::AssetId, vote_weight: F::Balance);
+pub trait VoteInfoHandler<AccountId> {
+	fn update_vote_info(who: AccountId, asset_id: VoteAssetId, vote_weight: VoteWeight);
 }

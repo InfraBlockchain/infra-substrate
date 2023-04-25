@@ -106,7 +106,7 @@ pub mod pallet {
 		/// The actual transaction charging logic that charges the fees.
 		type OnChargeAssetTransaction: OnChargeAssetTransaction<Self>;
 		/// The type that handles the voting info.
-		type VoteInfoHandler: VoteInfoHandler<Self::AccountId, Self::Fungibles>;
+		type VoteInfoHandler: VoteInfoHandler<Self::AccountId>;
 	}
 
 	#[pallet::pallet]

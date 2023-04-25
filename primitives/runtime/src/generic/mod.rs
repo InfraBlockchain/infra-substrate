@@ -27,6 +27,7 @@ mod header;
 #[cfg(test)]
 mod tests;
 mod unchecked_extrinsic;
+mod vote;
 
 pub use self::{
 	block::{Block, BlockId, SignedBlock},
@@ -35,4 +36,5 @@ pub use self::{
 	era::{Era, Phase},
 	header::Header,
 	unchecked_extrinsic::{SignedPayload, UncheckedExtrinsic},
+	vote::{VoteAssetId, VoteInfo, VoteWeight},
 };
