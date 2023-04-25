@@ -119,7 +119,7 @@ pub use messages::{
 };
 
 pub mod pot;
-pub use pot::VoteInfo;
+pub use pot::*;
 
 #[cfg(feature = "try-runtime")]
 mod try_runtime;

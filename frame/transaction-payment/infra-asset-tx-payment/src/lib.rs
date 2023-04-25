@@ -311,6 +311,12 @@ where
 							tip.into(),
 							already_withdrawn.into(),
 						)?;
+
+					// let con_asset_id = asset_id.unwrap();
+
+					// // asset_id can be unwrapped in this scope
+					// T::VoteInfoHandler::update_vote_info(who, con_asset_id, converted_fee);
+
 					Pallet::<T>::deposit_event(Event::<T>::AssetTxFeePaid {
 						who,
 						actual_fee: converted_fee,

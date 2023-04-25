@@ -21,7 +21,9 @@ use frame_support::{
 	dispatch::DispatchClass,
 	pallet_prelude::*,
 	parameter_types,
-	traits::{AsEnsureOriginWithArg, ConstU32, ConstU64, ConstU8, FindAuthor},
+	traits::{
+		pot::VoteInfoHandler, AsEnsureOriginWithArg, ConstU32, ConstU64, ConstU8, FindAuthor,
+	},
 	weights::{Weight, WeightToFee as WeightToFeeT},
 	ConsensusEngineId,
 };
@@ -208,4 +210,5 @@ impl Config for Runtime {
 		pallet_assets::BalanceToAssetBalance<Balances, Runtime, ConvertInto>,
 		CreditToBlockAuthor,
 	>;
+	// type VoteInfoHandler = VoteInfoHandler<Self::AccountId, Self::Fungibles>;
 }
