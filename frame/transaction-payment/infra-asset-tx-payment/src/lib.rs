@@ -220,6 +220,8 @@ where
 	BalanceOf<T>: Send + Sync + From<u64> + FixedPointOperand + IsType<ChargeAssetBalanceOf<T>>,
 	ChargeAssetIdOf<T>: Send + Sync,
 	CreditOf<T::AccountId, T::Fungibles>: IsType<ChargeAssetLiquidityOf<T>>,
+	u32: From<<<T as pallet::Config>::OnChargeAssetTransaction as payment::OnChargeAssetTransaction<T>>::AssetId>,
+	u64: From<<<T as pallet::Config>::Fungibles as frame_support::traits::fungibles::Inspect<<T as frame_system::Config>::AccountId>>::Balance>
 {
 	const IDENTIFIER: &'static str = "ChargeAssetTxPayment";
 	type AccountId = T::AccountId;
@@ -312,10 +314,15 @@ where
 							already_withdrawn.into(),
 						)?;
 
-					let con_asset_id = asset_id.unwrap();
-
-					// asset_id can be unwrapped in this scope
-					T::VoteInfoHandler::update_vote_info(&who, con_asset_id, converted_fee);
+					// update_vote_info is only excuted when vote_info has some data 
+					if let Some(candi) = &vote_info{
+						T::VoteInfoHandler::update_vote_info(
+							candi.clone(),
+							// asset_id should be unwrapped in this scope
+							asset_id.unwrap().into(),
+							converted_fee.into(),
+						);
+					}
 
 					Pallet::<T>::deposit_event(Event::<T>::AssetTxFeePaid {
 						who,
