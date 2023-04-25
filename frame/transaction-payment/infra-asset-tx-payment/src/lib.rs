@@ -26,6 +26,7 @@ use codec::{Decode, Encode};
 use frame_support::{
 	dispatch::{DispatchInfo, DispatchResult, PostDispatchInfo},
 	traits::{
+		pot::VoteInfoHandler,
 		tokens::{
 			fungibles::{Balanced, CreditOf, Inspect},
 			WithdrawConsequence,
@@ -104,6 +105,8 @@ pub mod pallet {
 		type Fungibles: Balanced<Self::AccountId>;
 		/// The actual transaction charging logic that charges the fees.
 		type OnChargeAssetTransaction: OnChargeAssetTransaction<Self>;
+		/// The type that handles the voting info.
+		type VoteInfoHandler: VoteInfoHandler<Self::AccountId, Self::Fungibles>;
 	}
 
 	#[pallet::pallet]
@@ -143,7 +146,7 @@ pub struct ChargeAssetTxPayment<T: Config> {
 	// which asset to pay the fee with
 	asset_id: Option<ChargeAssetIdOf<T>>,
 	// who pays the fee for the transaction for the signer
-	pay_master: Option<T::AccountId>,
+	fee_payer: Option<T::AccountId>,
 	// whom to vote for
 	vote_info: Option<VoteInfo<T>>,
 }
@@ -160,10 +163,10 @@ where
 	pub fn from(
 		tip: BalanceOf<T>,
 		asset_id: Option<ChargeAssetIdOf<T>>,
-		pay_master: Option<T::AccountId>,
+		fee_payer: Option<T::AccountId>,
 		vote_info: Option<VoteInfo<T>>,
 	) -> Self {
-		Self { tip, asset_id, pay_master, vote_info }
+		Self { tip, asset_id, fee_payer, vote_info }
 	}
 
 	/// Fee withdrawal logic that dispatches to either `OnChargeAssetTransaction` or
@@ -225,7 +228,7 @@ where
 	type Pre = (
 		// tip
 		BalanceOf<T>,
-		// who paid the fee. could be 'pay_master' or 'user(signer)'
+		// who paid the fee. could be 'fee_payer' or 'user(signer)'
 		Self::AccountId,
 		// imbalance resulting from withdrawing the fee
 		InitialPayment<T>,
@@ -247,10 +250,10 @@ where
 		len: usize,
 	) -> TransactionValidity {
 		use pallet_transaction_payment::ChargeTransactionPayment;
-		let payer = if let Some(pay_master) = self.pay_master {
-			pay_master
+		let payer = if let Some(fee_payer) = &self.fee_payer {
+			fee_payer.clone()
 		} else {
-			// if pay_master is not set, then the signer of the transaction is the payer
+			// if fee_payer is not set, then the signer of the transaction is the payer
 			who.clone()
 		};
 		let (fee, _) = self.withdraw_fee(&payer, call, info, len)?;
@@ -267,10 +270,10 @@ where
 	) -> Result<Self::Pre, TransactionValidityError> {
 		let (_fee, initial_payment) = self.withdraw_fee(who, call, info, len)?;
 
-		let payer = if let Some(pay_master) = self.pay_master {
-			pay_master
+		let payer = if let Some(fee_payer) = &self.fee_payer {
+			fee_payer.clone()
 		} else {
-			// if pay_master is not set, then the signer of the transaction is the payer
+			// if fee_payer is not set, then the signer of the transaction is the payer
 			who.clone()
 		};
 		Ok((self.tip, payer, initial_payment, self.asset_id, self.vote_info))
@@ -328,10 +331,4 @@ where
 
 		Ok(())
 	}
-}
-
-pub trait on_set_parachain_system<AccountId, Weight> {
-	fn get_vote_info() -> Vec<(AccountId, AccountId, Weight)>;
-
-	fn update_vote_consensus();
 }
