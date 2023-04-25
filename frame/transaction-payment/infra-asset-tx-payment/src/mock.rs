@@ -210,5 +210,5 @@ impl Config for Runtime {
 		pallet_assets::BalanceToAssetBalance<Balances, Runtime, ConvertInto>,
 		CreditToBlockAuthor,
 	>;
-	// type VoteInfoHandler = VoteInfoHandler<Self::AccountId, Self::Fungibles>;
+	type VoteInfoHandler = VoteInfoHandler<Self::AccountId, Self::Fungibles>;
 }
