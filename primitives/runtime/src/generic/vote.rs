@@ -7,7 +7,7 @@ use crate::{
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-pub type VoteWeight = u64;
+pub type VoteWeight = u128;
 pub type VoteAssetId = u32;
 
 #[derive(Encode, Decode, PartialEq, Eq, Clone, sp_core::RuntimeDebug, TypeInfo, MaxEncodedLen)]

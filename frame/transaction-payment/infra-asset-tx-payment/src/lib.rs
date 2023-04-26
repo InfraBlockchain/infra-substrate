@@ -181,6 +181,11 @@ where
 	ChargeAssetIdOf<T>: Send + Sync,
 	CreditOf<T::AccountId, T::Fungibles>: IsType<ChargeAssetLiquidityOf<T>>,
 {
+	// For benchmarking only
+	pub fn new() -> Self {
+		Self { tip: Default::default(), asset_id: None, fee_payer: None, vote_candidate: None }
+	}
+
 	/// Utility constructor. Used only in client/factory code.
 	pub fn from(
 		tip: BalanceOf<T>,

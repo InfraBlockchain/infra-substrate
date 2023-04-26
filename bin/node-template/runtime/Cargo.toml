@@ -18,6 +18,7 @@ scale-info = { version = "2.1.1", default-features = false, features = ["derive"
 
 pallet-aura = { version = "4.0.0-dev", default-features = false, path = "../../../frame/aura" }
 pallet-balances = { version = "4.0.0-dev", default-features = false, path = "../../../frame/balances" }
+pallet-assets = { version = "4.0.0-dev", default-features = false, path = "../../../frame/assets" }
 frame-support = { version = "4.0.0-dev", default-features = false, path = "../../../frame/support" }
 pallet-grandpa = { version = "4.0.0-dev", default-features = false, path = "../../../frame/grandpa" }
 pallet-insecure-randomness-collective-flip = { version = "4.0.0-dev", default-features = false, path = "../../../frame/insecure-randomness-collective-flip" }
@@ -27,6 +28,7 @@ frame-try-runtime = { version = "0.10.0-dev", default-features = false, path = "
 pallet-timestamp = { version = "4.0.0-dev", default-features = false, path = "../../../frame/timestamp" }
 pallet-transaction-payment = { version = "4.0.0-dev", default-features = false, path = "../../../frame/transaction-payment" }
 pallet-infra-asset-tx-payment = { version = "0.1.0", default-features = false, path = "../../../frame/transaction-payment/infra-asset-tx-payment/" }
+pallet-authorship = { version = "4.0.0-dev", default-features = false, path = "../../../frame/authorship" }
 frame-executive = { version = "4.0.0-dev", default-features = false, path = "../../../frame/executive" }
 sp-api = { version = "4.0.0-dev", default-features = false, path = "../../../primitives/api" }
 sp-block-builder = { version = "4.0.0-dev", default-features = false, path = "../../../primitives/block-builder" }
@@ -70,6 +72,8 @@ std = [
 	"frame-try-runtime/std",
 	"pallet-aura/std",
 	"pallet-balances/std",
+	"pallet-assets/std",
+	"pallet-authorship/std",
 	"pallet-grandpa/std",
 	"pallet-insecure-randomness-collective-flip/std",
 	"pallet-sudo/std",

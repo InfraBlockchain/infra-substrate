@@ -42,6 +42,8 @@ sp-inherents = { version = "4.0.0-dev", path = "../../../primitives/inherents" }
 sp-keyring = { version = "7.0.0", path = "../../../primitives/keyring" }
 frame-system = { version = "4.0.0-dev", path = "../../../frame/system" }
 pallet-transaction-payment = { version = "4.0.0-dev", default-features = false, path = "../../../frame/transaction-payment" }
+pallet-infra-asset-tx-payment = { version = "0.1.0", default-features = false, path = "../../../frame/transaction-payment/infra-asset-tx-payment/" }
+pallet-assets = { version = "4.0.0-dev", default-features = false, path = "../../../frame/assets" }
 
 # These dependencies are used for the node template's RPCs
 jsonrpsee = { version = "0.16.2", features = ["server"] }

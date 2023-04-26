@@ -147,6 +147,10 @@ fn testnet_genesis(
 		grandpa: GrandpaConfig {
 			authorities: initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect(),
 		},
+		assets: pallet_assets::GenesisConfig {
+			assets: vec![(1, get_account_id_from_seed::<sr25519::Public>("Alice"), true, 1)],
+			..Default::default()
+		},
 		sudo: SudoConfig {
 			// Assign network admin rights.
 			key: Some(root_key),
