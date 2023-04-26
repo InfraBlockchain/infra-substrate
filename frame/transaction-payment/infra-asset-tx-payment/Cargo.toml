@@ -1,5 +1,5 @@
 [package]
-name = "infra-asset-tx-payment"
+name = "pallet-infra-asset-tx-payment"
 version = "0.1.0"
 edition = "2021"
 

@@ -138,12 +138,6 @@ fn transaction_payment_in_asset_possible() {
 			// we convert the from weight to fee based on the ratio between asset min balance and
 			// existential deposit
 			let fee = (base_weight + weight + len as u64) * min_balance / ExistentialDeposit::get();
-			let _ = ChargeAssetTxPayment::<Runtime>::from(0, Some(asset_id), None, None).validate(
-				&caller,
-				CALL,
-				&info_from_weight(Weight::from_parts(weight, 0)),
-				len,
-			);
 
 			let _ = ChargeAssetTxPayment::<Runtime>::from(0, Some(asset_id), None, None)
 				.pre_dispatch(&caller, CALL, &info_from_weight(Weight::from_parts(weight, 0)), len);
