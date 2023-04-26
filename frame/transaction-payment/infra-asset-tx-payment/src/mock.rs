@@ -15,7 +15,6 @@
 
 use super::*;
 use crate as pallet_infra_asset_tx_payment;
-
 use codec;
 use frame_support::{
 	dispatch::DispatchClass,
@@ -32,6 +31,7 @@ use frame_system::EnsureRoot;
 use pallet_transaction_payment::CurrencyAdapter;
 use sp_core::H256;
 use sp_runtime::{
+	generic::{VoteAssetId, VoteWeight},
 	testing::Header,
 	traits::{BlakeTwo256, ConvertInto, IdentityLookup, SaturatedConversion},
 };
@@ -203,6 +203,18 @@ impl HandleCredit<AccountId, Assets> for CreditToBlockAuthor {
 	}
 }
 
+pub struct MockVoteInfo<AccountId> {
+	pub who: AccountId,
+	pub asset_id: VoteAssetId,
+	pub vote_weight: VoteWeight,
+}
+
+impl VoteInfoHandler<AccountId> for MockVoteInfo<AccountId> {
+	fn update_vote_info(_who: AccountId, _asset_id: VoteAssetId, _vote_weight: VoteWeight) {
+		// this dummy body should be replaced to work fine
+	}
+}
+
 impl Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Fungibles = Assets;
@@ -210,5 +222,5 @@ impl Config for Runtime {
 		pallet_assets::BalanceToAssetBalance<Balances, Runtime, ConvertInto>,
 		CreditToBlockAuthor,
 	>;
-	// type VoteInfoHandler = VoteInfoHandler<Self::AccountId, Self::Fungibles>;
+	type VoteInfoHandler = MockVoteInfo<AccountId>;
 }

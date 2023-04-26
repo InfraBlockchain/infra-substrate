@@ -1,4 +1,3 @@
-use super::tokens::fungibles;
 use crate::sp_runtime::generic::{VoteAssetId, VoteWeight};
 
 /// An interface for dealing with vote info

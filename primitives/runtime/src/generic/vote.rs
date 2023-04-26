@@ -1,6 +1,7 @@
 pub type VoteWeight = u64;
 pub type VoteAssetId = u32;
 
+/// The concrete type for VoteInfo
 pub struct VoteInfo<AccountId> {
 	pub who: AccountId,
 	pub asset_id: VoteAssetId,
