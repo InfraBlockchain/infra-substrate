@@ -258,13 +258,6 @@ where
 	CreditOf<T::AccountId, T::Fungibles>: IsType<ChargeAssetLiquidityOf<T>>,
 	VoteAssetIdOf<T>: Send + Sync + From<ChargeAssetIdOf<T>>,
 	VoteWeightOf<T>: Send + Sync + From<AssetBalanceOf<T>>,
-	// u32: From<<<T as pallet::Config>::OnChargeAssetTransaction as
-	// payment::OnChargeAssetTransaction<T>>::AssetId>,
-	// u64: From<
-	// 	<<T as pallet::Config>::Fungibles as frame_support::traits::fungibles::Inspect<
-	// 		<T as frame_system::Config>::AccountId,
-	// 	>>::Balance,
-	// >,
 {
 	const IDENTIFIER: &'static str = "ChargeAssetTxPayment";
 	type AccountId = T::AccountId;
