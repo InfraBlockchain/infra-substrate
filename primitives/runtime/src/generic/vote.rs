@@ -8,16 +8,19 @@ pub struct VoteInfo<AccountId> {
 	pub vote_weight: VoteWeight,
 }
 
+/// An interface for dealing with vote info
 impl<AccountId: Clone> VoteInfo<AccountId> {
-	fn who(&self) -> AccountId {
+	/// Get the candidate for whom
+	pub fn who(&self) -> AccountId {
 		self.who.clone()
 	}
-
-	fn asset_id(&self) -> VoteAssetId {
+	/// Get asset for which asset id voted
+	pub fn asset_id(&self) -> VoteAssetId {
 		self.asset_id
 	}
 
-	fn vote_weight(&self) -> VoteWeight {
+	/// Get the vote weight for whom
+	pub fn vote_weight(&self) -> VoteWeight {
 		self.vote_weight
 	}
 }

@@ -38,6 +38,7 @@ use frame_support::{
 use pallet_transaction_payment::OnChargeTransaction;
 use scale_info::TypeInfo;
 use sp_runtime::{
+	generic::{VoteAssetId, VoteWeight},
 	traits::{DispatchInfoOf, Dispatchable, PostDispatchInfoOf, SignedExtension, Zero},
 	transaction_validity::{
 		InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransaction,
@@ -76,8 +77,18 @@ pub(crate) type ChargeAssetIdOf<T> =
 pub(crate) type ChargeAssetLiquidityOf<T> =
 	<<T as Config>::OnChargeAssetTransaction as OnChargeAssetTransaction<T>>::LiquidityInfo;
 
+/// Vote asset id type alias.
+pub(crate) type VoteAssetIdOf<T> = <<T as Config>::VoteInfoHandler as VoteInfoHandler<
+	<T as frame_system::Config>::AccountId,
+>>::VoteAssetId;
+
+/// Vote weight type alias.
+pub(crate) type VoteWeightOf<T> = <<T as Config>::VoteInfoHandler as VoteInfoHandler<
+	<T as frame_system::Config>::AccountId,
+>>::VoteWeight;
+
 // Vote info type alias
-pub(crate) type VoteInfo<T> = <T as frame_system::Config>::AccountId;
+pub(crate) type VoteCandidate<T> = <T as frame_system::Config>::AccountId;
 
 /// Used to pass the initial payment info from pre- to post-dispatch.
 #[derive(Encode, Decode, DefaultNoBound, TypeInfo)]
@@ -106,7 +117,11 @@ pub mod pallet {
 		/// The actual transaction charging logic that charges the fees.
 		type OnChargeAssetTransaction: OnChargeAssetTransaction<Self>;
 		/// The type that handles the voting info.
-		type VoteInfoHandler: VoteInfoHandler<Self::AccountId>;
+		type VoteInfoHandler: VoteInfoHandler<
+			Self::AccountId,
+			VoteAssetId = VoteAssetId,
+			VoteWeight = VoteWeight,
+		>;
 	}
 
 	#[pallet::pallet]
@@ -123,7 +138,14 @@ pub mod pallet {
 			actual_fee: AssetBalanceOf<T>,
 			tip: AssetBalanceOf<T>,
 			asset_id: Option<ChargeAssetIdOf<T>>,
-			vote_info: Option<VoteInfo<T>>,
+			vote_candidate: Option<VoteCandidate<T>>,
+		},
+
+		/// Transaction-as-a-Vote has been executed
+		VoteCollected {
+			who: T::AccountId,
+			vote_asset_id: VoteAssetIdOf<T>,
+			vote_weight: VoteWeightOf<T>,
 		},
 	}
 }
@@ -148,7 +170,7 @@ pub struct ChargeAssetTxPayment<T: Config> {
 	// who pays the fee for the transaction for the signer
 	fee_payer: Option<T::AccountId>,
 	// whom to vote for
-	vote_info: Option<VoteInfo<T>>,
+	vote_candidate: Option<VoteCandidate<T>>,
 }
 
 impl<T: Config> ChargeAssetTxPayment<T>
@@ -164,9 +186,9 @@ where
 		tip: BalanceOf<T>,
 		asset_id: Option<ChargeAssetIdOf<T>>,
 		fee_payer: Option<T::AccountId>,
-		vote_info: Option<VoteInfo<T>>,
+		vote_candidate: Option<VoteCandidate<T>>,
 	) -> Self {
-		Self { tip, asset_id, fee_payer, vote_info }
+		Self { tip, asset_id, fee_payer, vote_candidate }
 	}
 
 	/// Fee withdrawal logic that dispatches to either `OnChargeAssetTransaction` or
@@ -200,6 +222,20 @@ where
 			.map_err(|_| -> TransactionValidityError { InvalidTransaction::Payment.into() })
 		}
 	}
+
+	fn do_collect_vote(
+		candidate: VoteCandidate<T>,
+		asset_id: VoteAssetIdOf<T>,
+		vote_weight: VoteWeightOf<T>,
+	) {
+		T::VoteInfoHandler::update_vote_info(candidate.clone(), asset_id, vote_weight);
+
+		Pallet::<T>::deposit_event(Event::<T>::VoteCollected {
+			who: candidate,
+			vote_asset_id: asset_id.clone().into(),
+			vote_weight,
+		})
+	}
 }
 
 impl<T: Config> sp_std::fmt::Debug for ChargeAssetTxPayment<T> {
@@ -220,8 +256,15 @@ where
 	BalanceOf<T>: Send + Sync + From<u64> + FixedPointOperand + IsType<ChargeAssetBalanceOf<T>>,
 	ChargeAssetIdOf<T>: Send + Sync,
 	CreditOf<T::AccountId, T::Fungibles>: IsType<ChargeAssetLiquidityOf<T>>,
-	u32: From<<<T as pallet::Config>::OnChargeAssetTransaction as payment::OnChargeAssetTransaction<T>>::AssetId>,
-	u64: From<<<T as pallet::Config>::Fungibles as frame_support::traits::fungibles::Inspect<<T as frame_system::Config>::AccountId>>::Balance>
+	VoteAssetIdOf<T>: Send + Sync + From<ChargeAssetIdOf<T>>,
+	VoteWeightOf<T>: Send + Sync + From<AssetBalanceOf<T>>,
+	// u32: From<<<T as pallet::Config>::OnChargeAssetTransaction as
+	// payment::OnChargeAssetTransaction<T>>::AssetId>,
+	// u64: From<
+	// 	<<T as pallet::Config>::Fungibles as frame_support::traits::fungibles::Inspect<
+	// 		<T as frame_system::Config>::AccountId,
+	// 	>>::Balance,
+	// >,
 {
 	const IDENTIFIER: &'static str = "ChargeAssetTxPayment";
 	type AccountId = T::AccountId;
@@ -237,7 +280,7 @@ where
 		// asset_id for the transaction payment
 		Option<ChargeAssetIdOf<T>>,
 		// vote info included in the transaction
-		Option<VoteInfo<T>>,
+		Option<VoteCandidate<T>>,
 	);
 
 	fn additional_signed(&self) -> sp_std::result::Result<(), TransactionValidityError> {
@@ -278,7 +321,7 @@ where
 			// if fee_payer is not set, then the signer of the transaction is the payer
 			who.clone()
 		};
-		Ok((self.tip, payer, initial_payment, self.asset_id, self.vote_info))
+		Ok((self.tip, payer, initial_payment, self.asset_id, self.vote_candidate))
 	}
 
 	fn post_dispatch(
@@ -288,7 +331,7 @@ where
 		len: usize,
 		result: &DispatchResult,
 	) -> Result<(), TransactionValidityError> {
-		if let Some((tip, who, initial_payment, asset_id, vote_info)) = pre {
+		if let Some((tip, who, initial_payment, asset_id, vote_candidate)) = pre {
 			match initial_payment {
 				InitialPayment::Native(already_withdrawn) => {
 					pallet_transaction_payment::ChargeTransactionPayment::<T>::post_dispatch(
@@ -314,14 +357,14 @@ where
 							already_withdrawn.into(),
 						)?;
 
-					// update_vote_info is only excuted when vote_info has some data 
-					if let Some(candi) = &vote_info{
-						T::VoteInfoHandler::update_vote_info(
-							candi.clone(),
-							// asset_id should be unwrapped in this scope
-							asset_id.unwrap().into(),
+					// update_vote_info is only excuted when vote_info has some data
+					match (&vote_candidate, &asset_id) {
+						(Some(vote_candidate), Some(asset_id)) => Self::do_collect_vote(
+							vote_candidate.clone(),
+							asset_id.clone().into(),
 							converted_fee.into(),
-						);
+						),
+						_ => {},
 					}
 
 					Pallet::<T>::deposit_event(Event::<T>::AssetTxFeePaid {
@@ -329,7 +372,7 @@ where
 						actual_fee: converted_fee,
 						tip: converted_tip,
 						asset_id,
-						vote_info: vote_info.clone(),
+						vote_candidate,
 					});
 				},
 				InitialPayment::Nothing => {
