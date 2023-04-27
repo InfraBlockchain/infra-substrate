@@ -233,7 +233,7 @@ where
 		asset_id: VoteAssetIdOf<T>,
 		vote_weight: VoteWeightOf<T>,
 	) {
-		T::VoteInfoHandler::update_vote_info(candidate.clone(), asset_id, vote_weight);
+		T::VoteInfoHandler::update_pot_vote(candidate.clone(), asset_id, vote_weight);
 
 		Pallet::<T>::deposit_event(Event::<T>::VoteCollected {
 			who: candidate,

@@ -6,8 +6,10 @@
 pub use pallet::*;
 
 use frame_support::traits::pot::VoteInfoHandler;
-use sp_runtime::generic::{VoteAssetId, VoteInfo, VoteWeight};
+use sp_runtime::generic::{VoteAssetId, VoteWeight};
 use sp_std::vec::Vec;
+
+pub type AccountnAssetId<AccountId, VoteAssetId> = (AccountId, VoteAssetId);
 
 #[cfg(test)]
 mod mock;
@@ -39,7 +41,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::unbounded]
 	#[pallet::getter(fn vote_info)]
-	pub type VoteInfos<T: Config> = StorageValue<_, Vec<VoteInfo<T::AccountId>>, ValueQuery>;
+	pub type PotVotes<T: Config> = StorageMap<_, Twox64Concat, AccountnAssetId<T::AccountId, VoteAssetId>, VoteWeight, OptionQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -56,16 +58,22 @@ pub mod pallet {
 impl<T: Config> VoteInfoHandler<T::AccountId> for Pallet<T> {
 	type VoteAssetId = VoteAssetId;
 	type VoteWeight = VoteWeight;
+	fn update_pot_vote(who: T::AccountId, asset_id: VoteAssetId, vote_weight: VoteWeight) {
+		// each vote_info is stored to VoteInfo StorageMap like: {key: (AccountId, VoteAssetId), value: VoteWeight }
+		let key = (who, asset_id);
+		Self::do_update_pot_vote(key, vote_weight);
+	}
+}
 
-	fn update_vote_info(
-		who: T::AccountId,
-		asset_id: Self::VoteAssetId,
-		vote_weight: Self::VoteWeight,
-	) {
-		let mut vote_info = Self::vote_info();
-		let new = VoteInfo::new(who.clone(), asset_id, vote_weight);
-		vote_info.push(new);
-		<VoteInfos<T>>::put(vote_info);
-		Pallet::<T>::deposit_event(Event::VoteCollected { who, asset_id, vote_weight });
+impl<T: Config> Pallet<T> {
+	fn do_update_pot_vote(key: AccountnAssetId<T::AccountId, VoteAssetId>, vote_weight: VoteWeight) {
+		if let Some(old_weight) = PotVotes::<T>::get(&key) {
+			// Weight for asset id already existed
+			let new_weight = old_weight.saturating_add(vote_weight);
+			PotVotes::<T>::insert(&key, new_weight);
+		} else {
+			// Weight for the asset id not existed. Need to insert new one
+			PotVotes::<T>::insert(&key, vote_weight);
+		}
 	}
 }

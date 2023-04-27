@@ -17,7 +17,7 @@
 
 //! Runtime Modules shared primitive types.
 
-#![warn(missing_docs)]
+// #![warn(missing_docs)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[doc(hidden)]
