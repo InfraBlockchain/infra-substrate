@@ -348,6 +348,7 @@ construct_runtime!(
 		Grandpa: pallet_grandpa,
 		Balances: pallet_balances,
 		Assets: pallet_assets,
+		Authorship: pallet_authorship,
 		TransactionPayment: pallet_transaction_payment,
 		InfraAssetTxPayment: pallet_infra_asset_tx_payment,
 		Sudo: pallet_sudo,

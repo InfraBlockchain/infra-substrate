@@ -149,6 +149,10 @@ fn testnet_genesis(
 		},
 		assets: pallet_assets::GenesisConfig {
 			assets: vec![(1, get_account_id_from_seed::<sr25519::Public>("Alice"), true, 1)],
+			accounts: vec![
+				(1, get_account_id_from_seed::<sr25519::Public>("Alice"), 1 << 30),
+				(1, get_account_id_from_seed::<sr25519::Public>("Bob"), 1 << 30),
+			],
 			..Default::default()
 		},
 		sudo: SudoConfig {
