@@ -36,5 +36,5 @@ pub use self::{
 	era::{Era, Phase},
 	header::Header,
 	unchecked_extrinsic::{SignedPayload, UncheckedExtrinsic},
-	vote::{VoteAssetId, VoteWeight},
+	vote::{VoteAssetId, VoteWeight, PotVote},
 };
