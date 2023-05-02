@@ -38,7 +38,7 @@ use frame_support::{
 use pallet_transaction_payment::OnChargeTransaction;
 use scale_info::TypeInfo;
 use sp_runtime::{
-	generic::{VoteAssetId, VoteWeight},
+	generic::{VoteAssetId, VoteWeight, VoteAccountId},
 	traits::{DispatchInfoOf, Dispatchable, PostDispatchInfoOf, SignedExtension, Zero},
 	transaction_validity::{
 		InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransaction,
@@ -78,17 +78,13 @@ pub(crate) type ChargeAssetLiquidityOf<T> =
 	<<T as Config>::OnChargeAssetTransaction as OnChargeAssetTransaction<T>>::LiquidityInfo;
 
 /// Vote asset id type alias.
-pub(crate) type VoteAssetIdOf<T> = <<T as Config>::VoteInfoHandler as VoteInfoHandler<
-	<T as frame_system::Config>::AccountId,
->>::VoteAssetId;
+pub(crate) type VoteAssetIdOf<T> = <<T as Config>::VoteInfoHandler as VoteInfoHandler>::VoteAssetId;
 
 /// Vote weight type alias.
-pub(crate) type VoteWeightOf<T> = <<T as Config>::VoteInfoHandler as VoteInfoHandler<
-	<T as frame_system::Config>::AccountId,
->>::VoteWeight;
+pub(crate) type VoteWeightOf<T> = <<T as Config>::VoteInfoHandler as VoteInfoHandler>::VoteWeight;
 
 // Vote info type alias
-pub(crate) type VoteCandidate<T> = <T as frame_system::Config>::AccountId;
+pub(crate) type VoteAccountIdOf<T> = <<T as Config>::VoteInfoHandler as VoteInfoHandler>::VoteAccountId;
 
 /// Used to pass the initial payment info from pre- to post-dispatch.
 #[derive(Encode, Decode, DefaultNoBound, TypeInfo)]
@@ -118,7 +114,7 @@ pub mod pallet {
 		type OnChargeAssetTransaction: OnChargeAssetTransaction<Self>;
 		/// The type that handles the voting info.
 		type VoteInfoHandler: VoteInfoHandler<
-			Self::AccountId,
+			VoteAccountId = VoteAccountId,
 			VoteAssetId = VoteAssetId,
 			VoteWeight = VoteWeight,
 		>;
@@ -138,12 +134,12 @@ pub mod pallet {
 			actual_fee: AssetBalanceOf<T>,
 			tip: AssetBalanceOf<T>,
 			asset_id: Option<ChargeAssetIdOf<T>>,
-			vote_candidate: Option<VoteCandidate<T>>,
+			vote_candidate: Option<VoteAccountIdOf<T>>,
 		},
 
 		/// Transaction-as-a-Vote has been executed
 		VoteCollected {
-			who: T::AccountId,
+			who: VoteAccountIdOf<T>,
 			vote_asset_id: VoteAssetIdOf<T>,
 			vote_weight: VoteWeightOf<T>,
 		},
@@ -170,7 +166,7 @@ pub struct ChargeAssetTxPayment<T: Config> {
 	// who pays the fee for the transaction for the signer
 	fee_payer: Option<T::AccountId>,
 	// whom to vote for
-	vote_candidate: Option<VoteCandidate<T>>,
+	vote_candidate: Option<VoteAccountIdOf<T>>,
 }
 
 impl<T: Config> ChargeAssetTxPayment<T>
@@ -191,7 +187,7 @@ where
 		tip: BalanceOf<T>,
 		asset_id: Option<ChargeAssetIdOf<T>>,
 		fee_payer: Option<T::AccountId>,
-		vote_candidate: Option<VoteCandidate<T>>,
+		vote_candidate: Option<VoteAccountIdOf<T>>,
 	) -> Self {
 		Self { tip, asset_id, fee_payer, vote_candidate }
 	}
@@ -229,11 +225,11 @@ where
 	}
 
 	fn do_collect_vote(
-		candidate: VoteCandidate<T>,
+		candidate: VoteAccountIdOf<T>,
 		asset_id: VoteAssetIdOf<T>,
 		vote_weight: VoteWeightOf<T>,
 	) {
-		T::VoteInfoHandler::update_pot_vote(candidate.clone(), asset_id, vote_weight);
+		T::VoteInfoHandler::update_pot_vote(candidate.clone().into(), asset_id, vote_weight);
 
 		Pallet::<T>::deposit_event(Event::<T>::VoteCollected {
 			who: candidate,
@@ -277,8 +273,8 @@ where
 		InitialPayment<T>,
 		// asset_id for the transaction payment
 		Option<ChargeAssetIdOf<T>>,
-		// vote info included in the transaction
-		Option<VoteCandidate<T>>,
+		// vote info included in the transaction. Should be same as Relay Chain's AccountId type
+		Option<VoteAccountIdOf<T>>,
 	);
 
 	fn additional_signed(&self) -> sp_std::result::Result<(), TransactionValidityError> {
