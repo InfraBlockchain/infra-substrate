@@ -192,25 +192,31 @@ impl pallet_authorship::Config for Runtime {
 	type EventHandler = ();
 }
 
-pub struct CreditToBlockAuthor;
-impl HandleCredit<AccountId, Assets> for CreditToBlockAuthor {
+pub(crate) const FEE_BUCKET_ADDRESS: AccountId = 1234;
+pub struct CreditToBucket;
+impl HandleCredit<AccountId, Assets> for CreditToBucket {
 	fn handle_credit(credit: CreditOf<AccountId, Assets>) {
-		if let Some(author) = pallet_authorship::Pallet::<Runtime>::author() {
-			// What to do in case paying the author fails (e.g. because `fee < min_balance`)
-			// default: drop the result which will trigger the `OnDrop` of the imbalance.
-			let _ = <Assets as Balanced<AccountId>>::resolve(&author, credit);
-		}
+		let dest = FEE_BUCKET_ADDRESS;
+		let _ = <Assets as Balanced<AccountId>>::resolve(&dest, credit);
 	}
 }
 
-pub struct MockVoteInfo<AccountId> {
+parameter_types! {
+	pub const PalletPalletId: PalletId = PalletId(*b"infrapid");
+}
+
+pub struct MockVoteInfo {
 	pub who: AccountId,
 	pub asset_id: VoteAssetId,
 	pub vote_weight: VoteWeight,
 }
 
-impl VoteInfoHandler<AccountId> for MockVoteInfo<AccountId> {
-	fn update_vote_info(_who: AccountId, _asset_id: VoteAssetId, _vote_weight: VoteWeight) {
+impl VoteInfoHandler for MockVoteInfo {
+	type VoteAccountId = VoteAccountId;
+	type VoteAssetId = VoteAssetId;
+	type VoteWeight = VoteWeight;
+
+	fn update_pot_vote(_who: VoteAccountId, _asset_id: VoteAssetId, _vote_weight: VoteWeight) {
 		// this dummy body should be replaced to work fine
 	}
 }
@@ -220,7 +226,8 @@ impl Config for Runtime {
 	type Fungibles = Assets;
 	type OnChargeAssetTransaction = FungiblesAdapter<
 		pallet_assets::BalanceToAssetBalance<Balances, Runtime, ConvertInto>,
-		CreditToBlockAuthor,
+		CreditToBucket,
 	>;
-	type VoteInfoHandler = MockVoteInfo<AccountId>;
+	type VoteInfoHandler = MockVoteInfo;
+	type PalletId = PalletPalletId;
 }
