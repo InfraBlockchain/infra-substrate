@@ -5,5 +5,9 @@ pub trait VoteInfoHandler {
 	type VoteAssetId: AssetId;
 	type VoteWeight: Balance;
 
-	fn update_pot_vote(who: Self::VoteAccountId, asset_id: Self::VoteAssetId, vote_weight: Self::VoteWeight);
+	fn update_pot_vote(
+		who: Self::VoteAccountId,
+		asset_id: Self::VoteAssetId,
+		vote_weight: Self::VoteWeight,
+	);
 }

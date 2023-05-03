@@ -38,7 +38,7 @@ use frame_support::{
 use pallet_transaction_payment::OnChargeTransaction;
 use scale_info::TypeInfo;
 use sp_runtime::{
-	generic::{VoteAssetId, VoteWeight, VoteAccountId},
+	generic::{VoteAccountId, VoteAssetId, VoteWeight},
 	traits::{DispatchInfoOf, Dispatchable, PostDispatchInfoOf, SignedExtension, Zero},
 	transaction_validity::{
 		InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransaction,
@@ -84,7 +84,8 @@ pub(crate) type VoteAssetIdOf<T> = <<T as Config>::VoteInfoHandler as VoteInfoHa
 pub(crate) type VoteWeightOf<T> = <<T as Config>::VoteInfoHandler as VoteInfoHandler>::VoteWeight;
 
 // Vote info type alias
-pub(crate) type VoteAccountIdOf<T> = <<T as Config>::VoteInfoHandler as VoteInfoHandler>::VoteAccountId;
+pub(crate) type VoteAccountIdOf<T> =
+	<<T as Config>::VoteInfoHandler as VoteInfoHandler>::VoteAccountId;
 
 /// Used to pass the initial payment info from pre- to post-dispatch.
 #[derive(Encode, Decode, DefaultNoBound, TypeInfo)]
