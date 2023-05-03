@@ -29,6 +29,7 @@ sp-core = { version = "7.0.0", default-features = false, path = "../core" }
 sp-io = { version = "7.0.0", default-features = false, path = "../io" }
 sp-std = { version = "5.0.0", default-features = false, path = "../std" }
 sp-weights = { version = "4.0.0", default-features = false, path = "../weights" }
+bounded-collections = { version = "0.1.5", default-features = false }
 
 [dev-dependencies]
 rand = "0.8.5"

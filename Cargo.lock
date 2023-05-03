@@ -10418,6 +10418,7 @@ dependencies = [
 name = "sp-runtime"
 version = "7.0.0"
 dependencies = [
+ "bounded-collections",
  "either",
  "hash256-std-hasher",
  "impl-trait-for-tuples",
