@@ -139,24 +139,25 @@ fn transaction_payment_in_asset_possible() {
 			// existential deposit
 			let fee = (base_weight + weight + len as u64) * min_balance / ExistentialDeposit::get();
 
-			let _ = ChargeAssetTxPayment::<Runtime>::from(0, Some(asset_id), None, None)
-				.pre_dispatch(&caller, CALL, &info_from_weight(Weight::from_parts(weight, 0)), len);
+			let pre = ChargeAssetTxPayment::<Runtime>::from(0, Some(asset_id), None, None)
+				.pre_dispatch(&caller, CALL, &info_from_weight(Weight::from_parts(weight, 0)), len)
+				.unwrap();
 
 			// assert that native balance is not used
 			assert_eq!(Balances::free_balance(caller), 10 * balance_factor);
 			// check that fee was charged in the given asset
 			assert_eq!(Assets::balance(asset_id, caller), balance - fee);
-			assert_eq!(Assets::balance(asset_id, BLOCK_AUTHOR), 0);
+			assert_eq!(Assets::balance(asset_id, FEE_BUCKET_ADDRESS), 0);
 
-			// assert_ok!(ChargeAssetTxPayment::<Runtime>::post_dispatch(
-			// 	Some(pre),
-			// 	&info_from_weight(Weight::from_parts(weight, 0)),
-			// 	&default_post_info(),
-			// 	len,
-			// 	&Ok(())
-			// ));
-			// assert_eq!(Assets::balance(asset_id, caller), balance - fee);
-			// // check that the block author gets rewarded
-			// assert_eq!(Assets::balance(asset_id, BLOCK_AUTHOR), fee);
+			assert_ok!(ChargeAssetTxPayment::<Runtime>::post_dispatch(
+				Some(pre),
+				&info_from_weight(Weight::from_parts(weight, 0)),
+				&default_post_info(),
+				len,
+				&Ok(())
+			));
+			assert_eq!(Assets::balance(asset_id, caller), balance - fee);
+			// check that the block author gets rewarded
+			assert_eq!(Assets::balance(asset_id, FEE_BUCKET_ADDRESS), fee);
 		});
 }
