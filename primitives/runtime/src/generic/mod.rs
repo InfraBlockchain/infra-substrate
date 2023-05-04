@@ -38,6 +38,6 @@ pub use self::{
 	unchecked_extrinsic::{SignedPayload, UncheckedExtrinsic},
 	vote::{
 		VoteAssetId, VoteWeight, VoteAccountId, 
-		PotVotes, PotVote, MAX_VOTE_NUM, PotVotesResult
+		PotVotes, PotVote, PotVotesResult
 	},
 };

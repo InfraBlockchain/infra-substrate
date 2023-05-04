@@ -22,12 +22,22 @@ pub const MAX_VOTE_NUM: u32 = 16 * 1024;
 pub type PotVotesResult = BoundedVec<PotVote, ConstU32<MAX_VOTE_NUM>>;
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, sp_core::RuntimeDebug, TypeInfo)]
-/// Single Vote type for Pot
-pub struct PotVote((VoteAssetId, VoteAccountId, VoteWeight));
+/// Single Pot vote type
+pub struct PotVote {
+	#[codec(compact)]
+	pub asset_id: VoteAssetId, 
+	pub account_id: VoteAccountId, 
+	#[codec(compact)]
+	pub vote_weight: VoteWeight 
+}
 
 impl PotVote {
 	pub fn new(asset_id: VoteAssetId, account_id: VoteAccountId, vote_weight: VoteWeight) -> Self {
-		Self((asset_id, account_id, vote_weight))
+		Self {
+			asset_id,
+			account_id,
+			vote_weight,
+		}
 	}
 }
 
@@ -39,7 +49,9 @@ impl PotVote {
 /// It is collected for every block as a form of (Asset Id, Account Id, Vote Weight).
 pub struct PotVotes {
 	pub votes: BTreeMap<(VoteAssetId, VoteAccountId), VoteWeight>,
+	#[codec(compact)]
 	pub vote_count: u32,
+	#[codec(compact)]
 	pub max_vote_count: u32,
 }
 
