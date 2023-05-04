@@ -21,15 +21,9 @@ pub type VoteAssetId = u32;
 pub const MAX_VOTE_NUM: u32 = 16 * 1024;
 pub type PotVotesResult = BoundedVec<PotVote, ConstU32<MAX_VOTE_NUM>>;
 
-#[derive(Encode, Decode, sp_core::RuntimeDebug, TypeInfo)]
+#[derive(Encode, Decode, Clone, PartialEq, Eq, sp_core::RuntimeDebug, TypeInfo)]
 /// Single Vote type for Pot
 pub struct PotVote((VoteAssetId, VoteAccountId, VoteWeight));
-
-impl PartialEq for PotVote {
-	fn eq(&self, other: &Self) -> bool {
-		self.0 == other.0
-	}
-}
 
 impl PotVote {
 	pub fn new(asset_id: VoteAssetId, account_id: VoteAccountId, vote_weight: VoteWeight) -> Self {
