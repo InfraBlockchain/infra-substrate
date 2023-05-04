@@ -45,7 +45,7 @@ pub struct PotVotes {
 
 /// An interface for dealing with vote info
 impl PotVotes {
-	pub fn new(candidate: VoteAccountId, asset_id: VoteAssetId, vote_weight: VoteWeight) -> Self {
+	pub fn new(asset_id: VoteAssetId, candidate: VoteAccountId, vote_weight: VoteWeight) -> Self {
 		let mut votes = BTreeMap::new();
 		votes.insert((asset_id, candidate), vote_weight);
 		Self {
@@ -97,11 +97,11 @@ mod tests {
 	use super::*;
 
 	fn new_pot_votes(
-		candidate: VoteAccountId, 
 		asset_id: VoteAssetId, 
+		candidate: VoteAccountId, 
 		vote_weight: VoteWeight
 	) -> PotVotes {
-		PotVotes::new(candidate, asset_id, vote_weight)
+		PotVotes::new(asset_id, candidate, vote_weight)
 	}
 
 	#[test]
@@ -109,7 +109,7 @@ mod tests {
 		let candidate: VoteAccountId = AccountId32::new([0u8; 32]);
 		let asset_id: VoteAssetId = 0;
 		let vote_weight: VoteWeight = 1;
-		let mut pot_votes = new_pot_votes(candidate.clone(), asset_id, vote_weight);
+		let mut pot_votes = new_pot_votes(asset_id, candidate.clone(), vote_weight);
 		for i in 1..MAX_VOTE_NUM+1 {
 			pot_votes.update_vote_weight(i, candidate.clone(), 1);
 		}
@@ -120,7 +120,7 @@ mod tests {
 	fn get_votes_works() {
 		let candidate: VoteAccountId = AccountId32::new([0u8; 32]);
 		let vote_weight: VoteWeight = 1; 
-		let mut pot_votes = new_pot_votes(candidate.clone(), 0, vote_weight);
+		let mut pot_votes = new_pot_votes(0, candidate.clone(), vote_weight);
 		pot_votes.update_vote_weight(1, candidate.clone(), vote_weight);
 		pot_votes.update_vote_weight(2, candidate.clone(), vote_weight);
 		pot_votes.update_vote_weight(3, candidate.clone(), vote_weight);
