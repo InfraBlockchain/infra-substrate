@@ -96,7 +96,7 @@ impl PotVotes {
 
 	fn increase_vote_count_if_not_exceeds(&mut self) -> bool {
 		let temp = self.vote_count + 1;
-		if temp.le(&MAX_VOTE_NUM){
+		if temp.le(&self.max_vote_count){
 			self.vote_count += 1;
 			return true; 
 		}
