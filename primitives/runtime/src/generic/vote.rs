@@ -22,6 +22,7 @@ pub const MAX_VOTE_NUM: u32 = 16 * 1024;
 pub type PotVotesResult = BoundedVec<PotVote, ConstU32<MAX_VOTE_NUM>>;
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, sp_core::RuntimeDebug, TypeInfo)]
+#[cfg_attr(feature = "std", derive(Default, Hash))]
 /// Single Pot vote type
 pub struct PotVote {
 	#[codec(compact)]
