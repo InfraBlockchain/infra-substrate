@@ -25,6 +25,7 @@ mod tests;
 use codec::{Decode, Encode};
 use frame_support::{
 	dispatch::{DispatchInfo, DispatchResult, PostDispatchInfo},
+	pallet_prelude::*,
 	traits::{
 		pot::VoteInfoHandler,
 		tokens::{
@@ -33,13 +34,16 @@ use frame_support::{
 		},
 		IsType,
 	},
-	DefaultNoBound,
+	DefaultNoBound, PalletId,
 };
 use pallet_transaction_payment::OnChargeTransaction;
 use scale_info::TypeInfo;
 use sp_runtime::{
-	generic::{VoteAssetId, VoteWeight, VoteAccountId},
-	traits::{DispatchInfoOf, Dispatchable, PostDispatchInfoOf, SignedExtension, Zero},
+	generic::{VoteAccountId, VoteAssetId, VoteWeight},
+	traits::{
+		AccountIdConversion, DispatchInfoOf, Dispatchable, PostDispatchInfoOf, SignedExtension,
+		Zero,
+	},
 	transaction_validity::{
 		InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransaction,
 	},
@@ -84,7 +88,8 @@ pub(crate) type VoteAssetIdOf<T> = <<T as Config>::VoteInfoHandler as VoteInfoHa
 pub(crate) type VoteWeightOf<T> = <<T as Config>::VoteInfoHandler as VoteInfoHandler>::VoteWeight;
 
 // Vote info type alias
-pub(crate) type VoteAccountIdOf<T> = <<T as Config>::VoteInfoHandler as VoteInfoHandler>::VoteAccountId;
+pub(crate) type VoteAccountIdOf<T> =
+	<<T as Config>::VoteInfoHandler as VoteInfoHandler>::VoteAccountId;
 
 /// Used to pass the initial payment info from pre- to post-dispatch.
 #[derive(Encode, Decode, DefaultNoBound, TypeInfo)]
@@ -118,6 +123,9 @@ pub mod pallet {
 			VoteAssetId = VoteAssetId,
 			VoteWeight = VoteWeight,
 		>;
+		/// The Pallet ID.
+		#[pallet::constant]
+		type PalletId: Get<PalletId>;
 	}
 
 	#[pallet::pallet]
@@ -143,6 +151,12 @@ pub mod pallet {
 			vote_asset_id: VoteAssetIdOf<T>,
 			vote_weight: VoteWeightOf<T>,
 		},
+	}
+
+	impl<T: Config> Pallet<T> {
+		pub fn account_id() -> T::AccountId {
+			T::PalletId::get().into_account_truncating()
+		}
 	}
 }
 

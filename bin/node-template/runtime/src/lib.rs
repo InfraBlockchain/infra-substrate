@@ -38,7 +38,7 @@ pub use frame_support::{
 		},
 		IdentityFee, Weight,
 	},
-	StorageValue,
+	PalletId, StorageValue,
 };
 pub use frame_system::Call as SystemCall;
 use frame_system::EnsureRoot;
@@ -295,15 +295,16 @@ impl pallet_assets::Config for Runtime {
 	type RemoveItemsLimit = ConstU32<1000>;
 }
 
-pub struct CreditToBlockAuthor;
-impl HandleCredit<AccountId, Assets> for CreditToBlockAuthor {
+pub struct CreditToBucket;
+impl HandleCredit<AccountId, Assets> for CreditToBucket {
 	fn handle_credit(credit: CreditOf<AccountId, Assets>) {
-		if let Some(author) = pallet_authorship::Pallet::<Runtime>::author() {
-			// What to do in case paying the author fails (e.g. because `fee < min_balance`)
-			// default: drop the result which will trigger the `OnDrop` of the imbalance.
-			let _ = <Assets as Balanced<AccountId>>::resolve(&author, credit);
-		}
+		let dest = pallet_infra_asset_tx_payment::Pallet::<Runtime>::account_id();
+		let _ = <Assets as Balanced<AccountId>>::resolve(&dest, credit);
 	}
+}
+
+parameter_types! {
+	pub const PalletPalletId: PalletId = PalletId(*b"infrapid");
 }
 
 impl pallet_infra_asset_tx_payment::Config for Runtime {
@@ -312,10 +313,11 @@ impl pallet_infra_asset_tx_payment::Config for Runtime {
 	/// The actual transaction charging logic that charges the fees.
 	type OnChargeAssetTransaction = FungiblesAdapter<
 		pallet_assets::BalanceToAssetBalance<Balances, Runtime, ConvertInto>,
-		CreditToBlockAuthor,
+		CreditToBucket,
 	>;
 	/// The type that handles the voting info.
 	type VoteInfoHandler = TemplateModule;
+	type PalletId = PalletPalletId;
 }
 
 impl pallet_sudo::Config for Runtime {

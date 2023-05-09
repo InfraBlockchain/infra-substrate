@@ -6,7 +6,7 @@
 pub use pallet::*;
 
 use frame_support::traits::pot::VoteInfoHandler;
-use sp_runtime::generic::{VoteAssetId, VoteWeight, VoteAccountId};
+use sp_runtime::generic::{VoteAccountId, VoteAssetId, VoteWeight};
 
 pub type AccountnAssetId<AccountId, VoteAssetId> = (AccountId, VoteAssetId);
 
@@ -40,7 +40,13 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::unbounded]
 	#[pallet::getter(fn vote_info)]
-	pub type PotVotes<T: Config> = StorageMap<_, Twox64Concat, AccountnAssetId<VoteAccountId, VoteAssetId>, VoteWeight, OptionQuery>;
+	pub type PotVotes<T: Config> = StorageMap<
+		_,
+		Twox64Concat,
+		AccountnAssetId<VoteAccountId, VoteAssetId>,
+		VoteWeight,
+		OptionQuery,
+	>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -59,7 +65,8 @@ impl<T: Config> VoteInfoHandler for Pallet<T> {
 	type VoteAssetId = VoteAssetId;
 	type VoteWeight = VoteWeight;
 	fn update_pot_vote(who: VoteAccountId, asset_id: VoteAssetId, vote_weight: VoteWeight) {
-		// each vote_info is stored to VoteInfo StorageMap like: {key: (AccountId, VoteAssetId), value: VoteWeight }
+		// each vote_info is stored to VoteInfo StorageMap like: {key: (AccountId, VoteAssetId),
+		// value: VoteWeight }
 		let key = (who, asset_id);
 		Self::do_update_pot_vote(key, vote_weight);
 	}
