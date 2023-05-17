@@ -43,19 +43,16 @@ use sp_runtime::generic::{VoteAssetId, VoteWeight};
 
 pub type ParachainAssetId = VoteAssetId;
 pub type RelayChainAssetId = VoteAssetId;
-
 pub type ParachainId = u32;
 
 /// System tokens API.
 pub trait SystemTokenInterface {
-	fn is_system_token(para_id: ParachainId, asset_id: ParachainAssetId) -> bool;
 	fn convert_to_relay_system_token(
 		para_id: ParachainId,
 		asset_id: ParachainAssetId,
 	) -> Option<RelayChainAssetId>;
 	fn adjusted_weight(asset_id: RelayChainAssetId) -> VoteWeight;
 }
-
 
 #[frame_support::pallet]
 pub mod pallet {
