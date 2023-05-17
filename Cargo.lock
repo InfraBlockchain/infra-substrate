@@ -6241,6 +6241,7 @@ dependencies = [
  "log",
  "pallet-assets 4.0.0-dev (git+https://github.com/InfraBlockchain/infra-substrate?branch=master)",
  "pallet-authorship",
+ "pallet-session",
  "parity-scale-codec",
  "scale-info",
  "sp-application-crypto 7.0.0",

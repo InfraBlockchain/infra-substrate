@@ -1,8 +1,8 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub mod traits;
-pub use traits::*;
+pub mod impls;
+pub use impls::*;
 
 use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;

@@ -48,3 +48,11 @@ impl<T: Config> VotingHandler<T> for Pallet<T> {
         )
     }
 }
+
+impl<T: Config> pallet_session::SessionManager<T::AccountId> for Pallet<T> {
+    fn new_session(_new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
+        None
+    }
+    fn start_session(_start_index: SessionIndex) {}
+    fn end_session(_end_index: SessionIndex) {}
+}
