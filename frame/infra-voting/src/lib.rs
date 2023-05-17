@@ -1,21 +1,20 @@
-
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod impls;
 pub use impls::*;
 
 use codec::{Decode, Encode, MaxEncodedLen};
-use scale_info::TypeInfo;
 use frame_support::{
 	traits::{EstimateNextNewSession, Get},
 	BoundedVec,
 };
-use sp_runtime::{
-	generic::{VoteWeight, VoteAccountId},
-	traits::MaybeDisplay,
-	RuntimeDebug, Saturating
-};
 pub use pallet::*;
+use scale_info::TypeInfo;
+use sp_runtime::{
+	generic::{VoteAccountId, VoteWeight},
+	traits::MaybeDisplay,
+	RuntimeDebug, Saturating,
+};
 
 /// Simple index type with which we can count sessions.
 pub type SessionIndex = u32;
@@ -26,14 +25,12 @@ pub type EraIndex = u32;
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo)]
 #[scale_info(skip_type_params(T))]
 pub struct VotingStatus<T: Config> {
-	pub status: Vec<(T::InfraVoteId, T::InfraVotePoints)>
+	pub status: Vec<(T::InfraVoteId, T::InfraVotePoints)>,
 }
 
 impl<T: Config> Default for VotingStatus<T> {
 	fn default() -> Self {
-		Self {
-			status: Default::default()
-		}
+		Self { status: Default::default() }
 	}
 }
 
@@ -42,7 +39,7 @@ impl<T: Config> VotingStatus<T> {
 		for s in self.status.iter_mut() {
 			if &s.0 == who {
 				s.1 = s.1.clone().saturating_add(weight.into());
-				return;
+				return
 			}
 		}
 		self.status.push((who.clone(), weight.into()));
@@ -68,26 +65,26 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaxValidators: Get<u32>;
 
-		/// Simply the vote account id type for vote 
+		/// Simply the vote account id type for vote
 		type InfraVoteId: Parameter
-		+ Member
-		+ MaybeSerializeDeserialize
-		+ sp_std::fmt::Debug
-		+ MaybeDisplay
-		+ Ord
-		+ MaxEncodedLen
-		+ From<VoteAccountId>;
-		
+			+ Member
+			+ MaybeSerializeDeserialize
+			+ sp_std::fmt::Debug
+			+ MaybeDisplay
+			+ Ord
+			+ MaxEncodedLen
+			+ From<VoteAccountId>;
+
 		/// Simply the vote weight type for election
 		type InfraVotePoints: sp_runtime::traits::AtLeast32BitUnsigned
-		+ codec::FullCodec
-		+ Copy
-		+ MaybeSerializeDeserialize
-		+ sp_std::fmt::Debug
-		+ From<VoteWeight>
-		+ Default
-		+ TypeInfo
-		+ MaxEncodedLen;
+			+ codec::FullCodec
+			+ Copy
+			+ MaybeSerializeDeserialize
+			+ sp_std::fmt::Debug
+			+ From<VoteWeight>
+			+ Default
+			+ TypeInfo
+			+ MaxEncodedLen;
 
 		/// Something that can estimate the next session change, accurately or as a best effort
 		/// guess.
@@ -109,9 +106,17 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::unbounded]
-	pub type VotingStatusPerSession<T: Config> = StorageDoubleMap<_, Twox64Concat, SessionIndex, Twox64Concat, T::InfraVoteId, VotingStatus<T>, ValueQuery>;
+	pub type VotingStatusPerSession<T: Config> = StorageDoubleMap<
+		_,
+		Twox64Concat,
+		SessionIndex,
+		Twox64Concat,
+		T::InfraVoteId,
+		VotingStatus<T>,
+		ValueQuery,
+	>;
 
 	#[pallet::storage]
-	pub type CurrentValidators<T: Config> = StorageValue<_, BoundedVec<T::InfraVoteId, T::MaxValidators>, ValueQuery>;
+	pub type CurrentValidators<T: Config> =
+		StorageValue<_, BoundedVec<T::InfraVoteId, T::MaxValidators>, ValueQuery>;
 }
-
