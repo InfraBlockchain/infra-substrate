@@ -356,7 +356,6 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment,
 		// InfraAssetTxPayment: pallet_infra_asset_tx_payment,
 		TokenManager: pallet_infra_system_token_manager,
-		TokenManager: pallet_token_manager,
 		Sudo: pallet_sudo,
 		// Include the custom logic from the pallet-template in the runtime.
 		TemplateModule: pallet_template,
