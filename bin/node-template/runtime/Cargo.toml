@@ -13,9 +13,11 @@ repository = "https://github.com/substrate-developer-hub/substrate-node-template
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "3.2.2", default-features = false, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "3.2.2", default-features = false, features = [
+	"derive",
+] }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
-
+pallet-token-manager = { version = "4.0.0-dev", default-features = false, path = "../../../frame/token-manager" }
 pallet-aura = { version = "4.0.0-dev", default-features = false, path = "../../../frame/aura" }
 pallet-balances = { version = "4.0.0-dev", default-features = false, path = "../../../frame/balances" }
 pallet-assets = { version = "4.0.0-dev", default-features = false, path = "../../../frame/assets" }
