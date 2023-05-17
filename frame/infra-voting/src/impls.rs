@@ -34,7 +34,7 @@ impl<T: Config> VotingHandler<T> for Pallet<T> {
 
 		let mut vote_status = VotingStatusPerSession::<T>::get(&session_index, &vote_id);
 		vote_status.increase_weight(&vote_id, vote_points);
-		Pallet::<T>::deposit_event(Event::<T>::VoteAdded {
+		Pallet::<T>::deposit_event(Event::<T>::VotePointsAdded {
 			session_index,
 			who: vote_id,
 			points: vote_points,

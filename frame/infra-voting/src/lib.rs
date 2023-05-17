@@ -50,7 +50,7 @@ impl<T: Config> VotingStatus<T> {
 pub mod pallet {
 	use super::*;
 	use frame_support::pallet_prelude::*;
-	use frame_system::pallet_prelude::*;
+	use frame_system::{pallet_prelude::*, ensure_root};
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -64,6 +64,12 @@ pub mod pallet {
 		/// Max number of validators that can be elected.
 		#[pallet::constant]
 		type MaxValidators: Get<u32>;
+
+		#[pallet::constant]
+		type MaxSeedTrustValidators: Get<u32>;
+
+		#[pallet::constant]
+		type MaxPotValidators: Get<u32>;
 
 		/// Simply the vote account id type for vote
 		type InfraVoteId: Parameter
@@ -101,9 +107,13 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {
-		VoteAdded { session_index: SessionIndex, who: T::InfraVoteId, points: T::InfraVotePoints },
+		/// Points has been added for candidate validator
+		VotePointsAdded { session_index: SessionIndex, who: T::InfraVoteId, points: T::InfraVotePoints },
+		/// Pot status has been changed
+		PotStatusChanged { status: bool },
 	}
 
+	// Voting status mapped to session index and infra vote id
 	#[pallet::storage]
 	#[pallet::unbounded]
 	pub type VotingStatusPerSession<T: Config> = StorageDoubleMap<
@@ -116,7 +126,40 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
+	// Current validators that are composed of seed trust validators and optional pot validators
 	#[pallet::storage]
 	pub type CurrentValidators<T: Config> =
-		StorageValue<_, BoundedVec<T::InfraVoteId, T::MaxValidators>, ValueQuery>;
+		StorageValue<_, BoundedVec<T::AccountId, T::MaxValidators>, ValueQuery>;
+
+	// Validators set to seed trust will be stored here
+	#[pallet::storage]
+	pub type SeedTrustValidators<T: Config> =
+		StorageValue<_, BoundedVec<T::AccountId, T::MaxSeedTrustValidators>, ValueQuery>;
+
+	// Validators elected by pot will be stored here
+	#[pallet::storage]
+	pub type PotValidators<T: Config> =
+		StorageValue<_, BoundedVec<T::AccountId, T::MaxPotValidators>, OptionQuery>;
+
+	// If it is true, validators can be elected as pot validators
+	#[pallet::storage]
+	pub type PotEnabled<T: Config> = StorageValue<_, bool, ValueQuery>;
+
+	#[pallet::call]
+	impl<T: Config> Pallet<T> {
+		// Pot availability can be set by root(Governance)
+		#[pallet::call_index(0)]
+		#[pallet::weight(0)]
+		// Need actual weight
+		pub fn set_pot_status(
+			origin: OriginFor<T>,
+			status: bool,
+		) -> DispatchResult {
+			// Only root can set pot status
+			ensure_root(origin)?;
+			PotEnabled::<T>::put(status);
+			Self::deposit_event(Event::PotStatusChanged { status });
+			Ok(())
+		}
+	}
 }
