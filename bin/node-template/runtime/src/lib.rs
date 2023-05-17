@@ -155,7 +155,7 @@ parameter_types! {
 
 // Configure FRAME pallets to include in runtime.
 
-impl pallet_token_manager::Config for Runtime {
+impl pallet_infra_system_token_manager::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 }
 
@@ -356,7 +356,7 @@ construct_runtime!(
 		Authorship: pallet_authorship,
 		TransactionPayment: pallet_transaction_payment,
 		// InfraAssetTxPayment: pallet_infra_asset_tx_payment,
-		TokenManager: pallet_token_manager,
+		TokenManager: pallet_infra_system_token_manager,
 		Sudo: pallet_sudo,
 		// Include the custom logic from the pallet-template in the runtime.
 		TemplateModule: pallet_template,

@@ -5101,11 +5101,11 @@ dependencies = [
  "pallet-balances",
  "pallet-grandpa",
  "pallet-infra-asset-tx-payment",
+ "pallet-infra-system-token-manager",
  "pallet-insecure-randomness-collective-flip",
  "pallet-sudo",
  "pallet-template",
  "pallet-timestamp",
- "pallet-token-manager",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
  "parity-scale-codec",
@@ -6044,6 +6044,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-infra-system-token-manager"
+version = "4.0.0-dev"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-insecure-randomness-collective-flip"
 version = "4.0.0-dev"
 dependencies = [
@@ -6759,21 +6774,6 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "sp-storage",
-]
-
-[[package]]
-name = "pallet-token-manager"
-version = "4.0.0-dev"
-dependencies = [
- "frame-support",
- "frame-system",
- "pallet-balances",
- "parity-scale-codec",
- "scale-info",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
 ]
 
 [[package]]
