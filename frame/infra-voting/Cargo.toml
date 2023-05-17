@@ -17,6 +17,7 @@ frame-support = { version = "4.0.0-dev", default-features = false, path = "../su
 frame-system = { version = "4.0.0-dev", default-features = false, path = "../system" }
 pallet-authorship = { version = "4.0.0-dev", default-features = false, path = "../authorship" }
 pallet-assets = { git = "https://github.com/InfraBlockchain/infra-substrate", default-features = false, branch = "master" }
+pallet-session = { version = "4.0.0-dev", path = "../session" }
 sp-application-crypto = { version = "7.0.0", default-features = false, path = "../../primitives/application-crypto" }
 sp-core = { version = "7.0.0", default-features = false, path = "../../primitives/core" }
 sp-io = { version = "7.0.0", default-features = false, path = "../../primitives/io" }
@@ -33,6 +34,7 @@ std = [
 	"log/std",
 	"pallet-authorship/std",
 	"pallet-assets/std",
+	"pallet-session/std",
 	"scale-info/std",
 	"sp-application-crypto/std",
 	"sp-core/std",
