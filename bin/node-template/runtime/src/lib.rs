@@ -154,7 +154,6 @@ parameter_types! {
 }
 
 // Configure FRAME pallets to include in runtime.
-
 impl pallet_infra_system_token_manager::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 }
@@ -357,6 +356,7 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment,
 		// InfraAssetTxPayment: pallet_infra_asset_tx_payment,
 		TokenManager: pallet_infra_system_token_manager,
+		TokenManager: pallet_token_manager,
 		Sudo: pallet_sudo,
 		// Include the custom logic from the pallet-template in the runtime.
 		TemplateModule: pallet_template,
@@ -380,6 +380,7 @@ pub type SignedExtra = (
 	frame_system::CheckWeight<Runtime>,
 	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
 	pallet_infra_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
+	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
 );
 
 /// Unchecked extrinsic type as expected by this runtime.
