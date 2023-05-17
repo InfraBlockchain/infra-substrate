@@ -123,7 +123,8 @@ pub fn create_benchmark_extrinsic(
 		)),
 		frame_system::CheckNonce::<runtime::Runtime>::from(nonce),
 		frame_system::CheckWeight::<runtime::Runtime>::new(),
-		pallet_infra_asset_tx_payment::ChargeAssetTxPayment::<runtime::Runtime>::new(),
+		pallet_transaction_payment::ChargeTransactionPayment::<runtime::Runtime>::from(0),
+		// pallet_infra_asset_tx_payment::ChargeAssetTxPayment::<runtime::Runtime>::new(),
 	);
 
 	let raw_payload = runtime::SignedPayload::from_raw(
