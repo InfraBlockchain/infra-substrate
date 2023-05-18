@@ -42,6 +42,10 @@ impl<T: Config> VotingHandler<T> for Pallet<T> {
 	}
 }
 
+impl<T: Config> VotingHandler<T> for () {
+	fn update_vote_weight(_: SessionIndex, _: VoteAccountId, _: VoteWeight) {}
+}
+
 impl<T: Config> pallet_session::SessionManager<T::AccountId> for Pallet<T> {
 	fn new_session(_new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
 		None

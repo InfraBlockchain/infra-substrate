@@ -47,6 +47,18 @@ pub trait SystemTokenInterface {
 	fn adjusted_weight(asset_id: RelayChainAssetId, vote_weight: VoteWeight) -> VoteWeight;
 }
 
+impl SystemTokenInterface for () {
+	fn convert_to_relay_system_token(
+			_para_id: ParachainId,
+			_asset_id: ParachainAssetId,
+		) -> Option<RelayChainAssetId> {
+		None
+	}
+	fn adjusted_weight(_asset_id: RelayChainAssetId, _vote_weight: VoteWeight) -> VoteWeight {
+		0
+	}
+}
+
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
