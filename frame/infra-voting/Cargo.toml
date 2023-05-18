@@ -1,5 +1,4 @@
 [package]
-
 name = "pallet-infra-voting"
 version = "0.1.0"
 authors = ["blockchain labs"]
@@ -17,7 +16,7 @@ frame-support = { version = "4.0.0-dev", default-features = false, path = "../su
 frame-system = { version = "4.0.0-dev", default-features = false, path = "../system" }
 pallet-authorship = { version = "4.0.0-dev", default-features = false, path = "../authorship" }
 pallet-assets = { git = "https://github.com/InfraBlockchain/infra-substrate", default-features = false, branch = "master" }
-pallet-session = { version = "4.0.0-dev", path = "../session" }
+pallet-session = { version = "4.0.0-dev", default-features = false, path = "../session" }
 sp-application-crypto = { version = "7.0.0", default-features = false, path = "../../primitives/application-crypto" }
 sp-core = { version = "7.0.0", default-features = false, path = "../../primitives/core" }
 sp-io = { version = "7.0.0", default-features = false, path = "../../primitives/io" }
