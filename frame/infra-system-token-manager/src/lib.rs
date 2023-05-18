@@ -44,13 +44,13 @@ pub trait SystemTokenInterface {
 		para_id: ParachainId,
 		asset_id: ParachainAssetId,
 	) -> Option<RelayChainAssetId>;
-	fn adjusted_weight(asset_id: RelayChainAssetId) -> VoteWeight;
+	fn adjusted_weight(asset_id: RelayChainAssetId, vote_weight: VoteWeight) -> VoteWeight;
 }
 
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::pallet_prelude::*;
+	use frame_support::pallet_prelude::{OptionQuery, *};
 	use frame_system::pallet_prelude::*;
 
 	#[pallet::config]
@@ -80,8 +80,13 @@ pub mod pallet {
 	/// The lookup table for .
 	#[pallet::storage]
 	#[pallet::getter(fn system_token_table)]
-	pub(super) type SystemTokenTable<T: Config> =
-		StorageMap<_, Twox64Concat, (ParachainId, ParachainAssetId), RelayChainAssetId>;
+	pub(super) type SystemTokenTable<T: Config> = StorageMap<
+		_,
+		Twox64Concat,
+		(ParachainId, ParachainAssetId),
+		RelayChainAssetId,
+		OptionQuery,
+	>;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -108,5 +113,21 @@ pub mod pallet {
 			});
 			Ok(())
 		}
+	}
+}
+
+impl<T: Config> SystemTokenInterface for Pallet<T> {
+	fn convert_to_relay_system_token(
+		para_id: ParachainId,
+		asset_id: ParachainAssetId,
+	) -> Option<RelayChainAssetId> {
+		match <SystemTokenTable<T>>::get((para_id, asset_id)) {
+			Some(r_asset_id) => return Some(r_asset_id),
+			None => return None,
+		}
+	}
+	fn adjusted_weight(_asset_id: RelayChainAssetId, vote_weight: VoteWeight) -> VoteWeight {
+		// To be implemented for considering the exchange rate, fee per extrinsic call and etc.
+		vote_weight
 	}
 }
