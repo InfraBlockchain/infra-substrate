@@ -83,14 +83,14 @@ pub mod pallet {
 	}
 
 	#[pallet::genesis_config]
-	pub struct GenesisConfig<T> {
+	pub struct GenesisConfig<T: Config> {
 		/// Genesis asset_links: para_id, para_asset_id, relay_asset_id
 		pub asset_links: Vec<(ParachainId, ParachainAssetId, RelayChainAssetId)>,
 		pub _phantom: PhantomData<T>,
 	}
 
 	#[cfg(feature = "std")]
-	impl<T> Default for GenesisConfig<T> {
+	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
 			Self { asset_links: Default::default(), _phantom: Default::default() }
 		}
