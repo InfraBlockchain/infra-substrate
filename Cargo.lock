@@ -5164,6 +5164,7 @@ dependencies = [
  "node-template-runtime",
  "pallet-assets 4.0.0-dev",
  "pallet-infra-asset-tx-payment",
+ "pallet-infra-system-token-manager",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc",
  "sc-basic-authorship",
