@@ -16,6 +16,8 @@ use sp_runtime::{
 	RuntimeDebug, Saturating,
 };
 
+use sp_std::prelude::*;
+
 /// Simple index type with which we can count sessions.
 pub type SessionIndex = u32;
 
