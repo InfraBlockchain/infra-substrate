@@ -82,6 +82,33 @@ pub mod pallet {
 		},
 	}
 
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T> {
+		/// Genesis asset_links: para_id, para_asset_id, relay_asset_id
+		pub asset_links: Vec<(ParachainId, ParachainAssetId, RelayChainAssetId)>,
+		pub _phantom: PhantomData<T>,
+	}
+
+	#[cfg(feature = "std")]
+	impl<T> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			Self { asset_links: Default::default(), _phantom: Default::default() }
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+		fn build(&self) {
+			for (para_id, para_asset_id, relay_asset_id) in &self.asset_links {
+				// assert!(
+				// 	SystemTokenTable::<T>::get((para_id, para_asset_id)),
+				// 	"Asset link already in use"
+				// );
+				SystemTokenTable::<T>::insert((para_id, para_asset_id), relay_asset_id);
+			}
+		}
+	}
+
 	// Error for the token manager pallet.
 	// #[pallet::error]
 	// pub enum Error<T> {
