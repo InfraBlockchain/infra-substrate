@@ -47,18 +47,6 @@ pub trait SystemTokenInterface {
 	fn adjusted_weight(asset_id: RelayChainAssetId, vote_weight: VoteWeight) -> VoteWeight;
 }
 
-impl SystemTokenInterface for () {
-	fn convert_to_relay_system_token(
-			_para_id: ParachainId,
-			_asset_id: ParachainAssetId,
-		) -> Option<RelayChainAssetId> {
-		None
-	}
-	fn adjusted_weight(_asset_id: RelayChainAssetId, _vote_weight: VoteWeight) -> VoteWeight {
-		0
-	}
-}
-
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
@@ -80,6 +68,23 @@ pub mod pallet {
 			para_asset_id: ParachainAssetId,
 			relay_asset_id: RelayChainAssetId,
 		},
+
+		AssetConverted {
+			para_id: ParachainId,
+			para_asset_id: ParachainAssetId,
+			relay_asset_id: RelayChainAssetId
+		},
+
+		WeightAdjusted {
+			old_weight: VoteWeight,
+			adjusted_weight: VoteWeight,
+		}
+	}
+
+	#[pallet::error]
+	pub enum Error<T> {
+		AssetAlreadyRegistered,
+		AssetNotRegistered
 	}
 
 	#[pallet::genesis_config]
@@ -100,11 +105,7 @@ pub mod pallet {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			for (para_id, para_asset_id, relay_asset_id) in &self.asset_links {
-				// assert!(
-				// 	SystemTokenTable::<T>::get((para_id, para_asset_id)),
-				// 	"Asset link already in use"
-				// );
-				SystemTokenTable::<T>::insert((para_id, para_asset_id), relay_asset_id);
+				SystemTokenTable::<T>::insert(para_id, para_asset_id, relay_asset_id);
 			}
 		}
 	}
@@ -119,10 +120,12 @@ pub mod pallet {
 	/// The lookup table for .
 	#[pallet::storage]
 	#[pallet::getter(fn system_token_table)]
-	pub(super) type SystemTokenTable<T: Config> = StorageMap<
+	pub(super) type SystemTokenTable<T: Config> = StorageDoubleMap<
 		_,
 		Twox64Concat,
-		(ParachainId, ParachainAssetId),
+		ParachainId, 
+		Twox64Concat,
+		ParachainAssetId,
 		RelayChainAssetId,
 		OptionQuery,
 	>;
@@ -136,15 +139,15 @@ pub mod pallet {
 		/// Set an account's name
 		#[pallet::call_index(0)]
 		#[pallet::weight(1_000)]
-		pub fn insert_asset_link(
+		pub fn register_asset(
 			origin: OriginFor<T>,
 			para_id: ParachainId,
 			para_asset_id: ParachainAssetId,
 			relay_asset_id: RelayChainAssetId,
 		) -> DispatchResult {
 			ensure_root(origin)?;
-
-			<SystemTokenTable<T>>::insert((para_id, para_asset_id), relay_asset_id);
+			ensure!(!SystemTokenTable::<T>::contains_key(para_id, para_asset_id), Error::<T>::AssetAlreadyRegistered);
+			SystemTokenTable::<T>::insert(para_id, para_asset_id, relay_asset_id);
 			Self::deposit_event(Event::<T>::AssetRegistered {
 				para_id,
 				para_asset_id,
@@ -155,18 +158,29 @@ pub mod pallet {
 	}
 }
 
+impl<T: Config> Pallet<T> {
+	pub fn do_adjust_weight(weight: VoteWeight) -> VoteWeight {
+		// TODO: To be implemented for considering the exchange rate, fee per extrinsic call and etc.
+		weight
+	}
+}
+
+// I think it would be great to return Result<()> type
 impl<T: Config> SystemTokenInterface for Pallet<T> {
 	fn convert_to_relay_system_token(
 		para_id: ParachainId,
-		asset_id: ParachainAssetId,
+		para_asset_id: ParachainAssetId,
 	) -> Option<RelayChainAssetId> {
-		match <SystemTokenTable<T>>::get((para_id, asset_id)) {
-			Some(r_asset_id) => return Some(r_asset_id),
-			None => return None,
-		}
+		if let Some(relay_asset_id) = <SystemTokenTable<T>>::get(para_id, para_asset_id) {
+			Self::deposit_event(Event::<T>::AssetConverted { para_id, para_asset_id, relay_asset_id, });
+			return Some(relay_asset_id)
+		} 
+		None
 	}
+
 	fn adjusted_weight(_asset_id: RelayChainAssetId, vote_weight: VoteWeight) -> VoteWeight {
-		// To be implemented for considering the exchange rate, fee per extrinsic call and etc.
-		vote_weight
+		let adjusted_weight = Self::do_adjust_weight(vote_weight);
+		Self::deposit_event(Event::<T>::WeightAdjusted { old_weight: vote_weight, adjusted_weight });
+		adjusted_weight
 	}
 }
