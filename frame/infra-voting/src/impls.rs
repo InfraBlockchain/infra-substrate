@@ -1,5 +1,6 @@
 use crate::*;
 
+pub type MaxValidatorsOf<T> = <T as Config>::MaxValidators;
 /// Means for interacting with a specialized version of the `session` trait.
 pub trait SessionInterface<AccountId> {
 	/// Disable the validator at the given index, returns `false` if the validator was already
@@ -47,9 +48,42 @@ impl<T: Config> VotingHandler<T> for () {
 }
 
 impl<T: Config> pallet_session::SessionManager<T::AccountId> for Pallet<T> {
-	fn new_session(_new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
-		None
+	fn new_session(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
+		log!(trace, "planning new session {}", new_index);
+		Self::handle_new_session(new_index, false).map(|v| v.into_inner())
 	}
-	fn start_session(_start_index: SessionIndex) {}
-	fn end_session(_end_index: SessionIndex) {}
+	fn new_session_genesis(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
+		log!(trace, "planning new session {} at genesis", new_index);
+		Self::handle_new_session(new_index, true).map(|v| v.into_inner())
+	}
+	fn start_session(start_index: SessionIndex) {
+		log!(trace, "starting session {}", start_index);
+		Self::handle_start_session(start_index);
+	}
+	fn end_session(end_index: SessionIndex) {
+		log!(trace, "ending session {}", end_index);
+		Self::handle_end_session(end_index);
+	}
+}
+
+impl<T: Config> Pallet<T> {
+	fn handle_new_session(
+		session_index: SessionIndex,
+		is_genesis: bool,
+	) -> Option<BoundedVec<T::AccountId, MaxValidatorsOf<T>>> {
+		if let Some(current_era) = CurrentEra::<T>::get() {
+			None
+		} else {
+			// Initial era
+			None
+		}
+	}
+
+	fn handle_start_session(session_index: SessionIndex) {
+		
+	}
+
+	fn handle_end_session(session_index: SessionIndex) {
+
+	} 
 }

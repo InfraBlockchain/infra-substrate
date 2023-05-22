@@ -24,6 +24,17 @@ pub type SessionIndex = u32;
 /// Counter for the number of eras that have passed.
 pub type EraIndex = u32;
 
+pub(crate) const LOG_TARGET: &str = "runtime::infra-voting";
+// syntactic sugar for logging.
+#[macro_export]
+macro_rules! log {
+	($level:tt, $patter:expr $(, $values:expr)* $(,)?) => {
+		log::$level!(
+			target: crate::LOG_TARGET,
+			concat!("[{:?}] 🗳️ ", $patter), <frame_system::Pallet<T>>::block_number() $(, $values)*
+		)
+	};
+}
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo)]
 #[scale_info(skip_type_params(T))]
 pub struct VotingStatus<T: Config> {
@@ -63,15 +74,10 @@ pub mod pallet {
 		/// The overarching event type.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
-		/// Max number of validators that can be elected.
+		/// Max number of validators that can be elected, 
+		/// which is composed of seed trust validators and pot validators
 		#[pallet::constant]
 		type MaxValidators: Get<u32>;
-
-		#[pallet::constant]
-		type MaxSeedTrustValidators: Get<u32>;
-
-		#[pallet::constant]
-		type MaxPotValidators: Get<u32>;
 
 		/// Simply the vote account id type for vote
 		type InfraVoteId: Parameter
@@ -89,10 +95,10 @@ pub mod pallet {
 			+ Copy
 			+ MaybeSerializeDeserialize
 			+ sp_std::fmt::Debug
-			+ From<VoteWeight>
 			+ Default
 			+ TypeInfo
-			+ MaxEncodedLen;
+			+ MaxEncodedLen
+			+ From<VoteWeight>;
 
 		/// Something that can estimate the next session change, accurately or as a best effort
 		/// guess.
@@ -115,6 +121,18 @@ pub mod pallet {
 		PotStatusChanged { status: bool },
 	}
 
+	#[pallet::error]
+	pub enum Error<T> {
+		SeedTrustExceedMaxValidators,
+	}
+
+	/// The current era index.
+	///
+	/// This is the latest planned era, depending on how the Session pallet queues the validator
+	/// set, it might be active or not.
+	#[pallet::storage]
+	pub type CurrentEra<T> = StorageValue<_, EraIndex, OptionQuery>;
+
 	// Voting status mapped to session index and infra vote id
 	#[pallet::storage]
 	#[pallet::unbounded]
@@ -130,37 +148,41 @@ pub mod pallet {
 
 	// Current validators that are composed of seed trust validators and optional pot validators
 	#[pallet::storage]
-	pub type CurrentValidators<T: Config> =
+	pub type ValidatorPool<T: Config> =
 		StorageValue<_, BoundedVec<T::AccountId, T::MaxValidators>, ValueQuery>;
 
 	// Validators set to seed trust will be stored here
 	#[pallet::storage]
-	pub type SeedTrustValidators<T: Config> =
-		StorageValue<_, BoundedVec<T::AccountId, T::MaxSeedTrustValidators>, ValueQuery>;
+	#[pallet::unbounded]
+	pub type SeedTrustValidatorPool<T: Config> =
+		StorageValue<_, Vec<T::AccountId>, OptionQuery>;
 
 	// Validators elected by pot will be stored here
 	#[pallet::storage]
-	pub type PotValidators<T: Config> =
-		StorageValue<_, BoundedVec<T::AccountId, T::MaxPotValidators>, OptionQuery>;
+	#[pallet::unbounded]
+	pub type PotValidatorPool<T: Config> =
+		StorageValue<_, Vec<T::AccountId>, OptionQuery>;
 
-	// If it is true, validators can be elected as pot validators
 	#[pallet::storage]
-	pub type PotEnabled<T: Config> = StorageValue<_, bool, ValueQuery>;
+	pub type NumberOfSeedTrustValidators<T: Config> = 
+		StorageValue<_, u32, ValueQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		// Pot availability can be set by root(Governance)
+		// Number of seed trust validators can be set by root(Governance)
 		#[pallet::call_index(0)]
 		#[pallet::weight(0)]
 		// Need actual weight
-		pub fn set_pot_status(
+		pub fn set_seed_trust_validators_num(
 			origin: OriginFor<T>,
-			status: bool,
+			num_validators: u32,
 		) -> DispatchResult {
 			// Only root can set pot status
 			ensure_root(origin)?;
-			PotEnabled::<T>::put(status);
-			Self::deposit_event(Event::PotStatusChanged { status });
+			// Seed Trust validators number should be less than max validators
+			ensure!(num_validators <= T::MaxValidators::get(), Error::<T>::SeedTrustExceedMaxValidators);
+			NumberOfSeedTrustValidators::<T>::put(num_validators);
+
 			Ok(())
 		}
 	}
