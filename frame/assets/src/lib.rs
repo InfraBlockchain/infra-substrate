@@ -1560,6 +1560,43 @@ pub mod pallet {
 			});
 			Ok(())
 		}
+
+		/// Move some assets from one account to another.
+		///
+		/// Origin must be Signed and the sender should be the Admin of the asset `id`.
+		///
+		/// - `id`: The identifier of the asset to have some amount transferred.
+		/// - `source`: The account to be debited.
+		/// - `dest`: The account to be credited.
+		/// - `amount`: The amount by which the `source`'s balance of assets should be reduced and
+		/// `dest`'s balance increased. The amount actually transferred may be slightly greater in
+		/// the case that the transfer would otherwise take the `source` balance above zero but
+		/// below the minimum balance. Must be greater than zero.
+		///
+		/// Emits `Transferred` with the actual amount transferred. If this takes the source balance
+		/// to below the minimum for the asset, then the amount transferred is increased to take it
+		/// to zero.
+		///
+		/// Weight: `O(1)`
+		/// Modes: Pre-existence of `dest`; Post-existence of `source`; Account pre-existence of
+		/// `dest`.
+		#[pallet::call_index(29)]
+		#[pallet::weight(T::WeightInfo::force_transfer())]
+		pub fn force_transfer2(
+			origin: OriginFor<T>,
+			id: T::AssetIdParameter,
+			source: AccountIdLookupOf<T>,
+			dest: AccountIdLookupOf<T>,
+			#[pallet::compact] amount: T::Balance,
+		) -> DispatchResult {
+			T::ForceOrigin::ensure_origin(origin)?;
+			let source = T::Lookup::lookup(source)?;
+			let dest = T::Lookup::lookup(dest)?;
+			let id: T::AssetId = id.into();
+
+			let f = TransferFlags { keep_alive: false, best_effort: false, burn_dust: false };
+			Self::do_transfer(id, &source, &dest, amount, None, f).map(|_| ())
+		}
 	}
 }
 

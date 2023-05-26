@@ -15,7 +15,7 @@ frame-benchmarking = { version = "4.0.0-dev", default-features = false, optional
 frame-support = { version = "4.0.0-dev", default-features = false, path = "../support" }
 frame-system = { version = "4.0.0-dev", default-features = false, path = "../system" }
 pallet-authorship = { version = "4.0.0-dev", default-features = false, path = "../authorship" }
-pallet-assets = { git = "https://github.com/InfraBlockchain/infra-substrate", default-features = false, branch = "master" }
+pallet-assets = { version = "4.0.0-dev", path = "../assets" }
 pallet-session = { version = "4.0.0-dev", default-features = false, path = "../session" }
 sp-application-crypto = { version = "7.0.0", default-features = false, path = "../../primitives/application-crypto" }
 sp-core = { version = "7.0.0", default-features = false, path = "../../primitives/core" }
