@@ -48,7 +48,6 @@ pub mod pallet {
 	>;
 
 	#[pallet::event]
-	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		VoteCollected { who: T::AccountId, asset_id: VoteAssetId, vote_weight: VoteWeight },
 	}
