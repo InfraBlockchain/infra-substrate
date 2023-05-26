@@ -24,10 +24,15 @@ sp-io = { version = "7.0.0", default-features = false, path = "../../primitives/
 sp-runtime = { version = "7.0.0", default-features = false, path = "../../primitives/runtime" }
 sp-std = { version = "5.0.0", default-features = false, path = "../../primitives/std" }
 
+[dev-dependencies]
+sp-tracing = { version = "6.0.0", path = "../../primitives/tracing" }
+sp-keyring = { version = "7.0.0", default-features = false, path = "../../primitives/keyring" }
+
 [features]
 default = ["std"]
 std = [
 	"frame-benchmarking?/std",
+	"serde",
 	"codec/std",
 	"frame-support/std",
 	"frame-system/std",
