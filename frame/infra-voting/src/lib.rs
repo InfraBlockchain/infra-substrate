@@ -14,7 +14,7 @@ use sp_runtime::{
 };
 
 #[cfg(test)]
-mod tests; 
+mod tests;
 
 #[cfg(test)]
 pub mod mock;
@@ -66,7 +66,6 @@ pub struct VotingStatus<T: Config> {
 	pub status: Vec<(T::InfraVoteAccountId, T::InfraVotePoints)>,
 }
 
-
 impl<T: Config> Default for VotingStatus<T> {
 	fn default() -> Self {
 		Self { status: Default::default() }
@@ -96,8 +95,8 @@ impl<T: Config> VotingStatus<T> {
 
 	/// Get top validators for given vote status.
 	/// We elect validators based on PoT which has exceeded the minimum vote points.
-	/// 
-	/// Note: 
+	///
+	/// Note:
 	/// This function should be called after `sort_by_vote_points` is called.
 	pub fn top_validators(&mut self, num: u32) -> Vec<T::AccountId> {
 		self.status
@@ -106,7 +105,7 @@ impl<T: Config> VotingStatus<T> {
 			.filter(|vote_status| vote_status.1 >= MinVotePointsThreshold::<T>::get().into())
 			.map(|vote_status| vote_status.0.clone().into())
 			.collect()
-	}  
+	}
 }
 
 #[frame_support::pallet]
@@ -165,7 +164,7 @@ pub mod pallet {
 		pub number_of_seed_trust_validators: u32,
 		pub force_era: Forcing,
 		pub is_pot_enable_at_genesis: bool,
-		pub vote_status_at_genesis: Vec<(T::InfraVoteAccountId, T::InfraVotePoints)>
+		pub vote_status_at_genesis: Vec<(T::InfraVoteAccountId, T::InfraVotePoints)>,
 	}
 
 	#[cfg(feature = "std")]
@@ -174,7 +173,7 @@ pub mod pallet {
 			GenesisConfig {
 				is_pot_enable_at_genesis: false,
 				seed_trust_validators: Default::default(),
-				total_number_of_validators: Default::default(),	
+				total_number_of_validators: Default::default(),
 				number_of_seed_trust_validators: Default::default(),
 				force_era: Default::default(),
 				vote_status_at_genesis: Default::default(),
@@ -211,7 +210,7 @@ pub mod pallet {
 		/// Seed trust validator has been added to the pool
 		SeedTrustAdded { who: T::AccountId },
 		/// Validator have been elected
-		ValidatorsElected { validators: Vec<T::AccountId>, pot_enabled: bool }, 
+		ValidatorsElected { validators: Vec<T::AccountId>, pot_enabled: bool },
 		/// Seed Trust validators have been elected
 		SeedTrustValidatorsElected,
 		/// Validators have been elected by PoT
@@ -241,8 +240,7 @@ pub mod pallet {
 	// Validators set of Seed Trust
 	#[pallet::storage]
 	#[pallet::unbounded]
-	pub type SeedTrustValidatorPool<T: Config> =
-		StorageValue<_, Vec<T::AccountId>, ValueQuery>;
+	pub type SeedTrustValidatorPool<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
 
 	/// Validators which have been elected by PoT at certain era index
 	#[pallet::storage]
@@ -252,20 +250,20 @@ pub mod pallet {
 
 	/// Number of seed trust validators that can be elected
 	#[pallet::storage]
-	pub type NumberOfSeedTrustValidators<T: Config> = 
-		StorageValue<_, u32, ValueQuery>;
+	pub type NumberOfSeedTrustValidators<T: Config> = StorageValue<_, u32, ValueQuery>;
 
-	/// Total Number of validators that can be elected, 
+	/// Total Number of validators that can be elected,
 	/// which is composed of seed trust validators and pot validators
 	#[pallet::storage]
 	pub type TotalNumberOfValidators<T: Config> = StorageValue<_, u32, ValueQuery>;
 
 	#[pallet::storage]
 	pub type MinVotePointsThreshold<T: Config> = StorageValue<_, VoteWeight, ValueQuery>;
-	
+
 	/// Start Session index for era
 	#[pallet::storage]
-	pub type StartSessionIndexPerEra<T: Config> = StorageMap<_, Twox64Concat, EraIndex, SessionIndex, OptionQuery>; 
+	pub type StartSessionIndexPerEra<T: Config> =
+		StorageMap<_, Twox64Concat, EraIndex, SessionIndex, OptionQuery>;
 
 	/// Mode of era forcing.
 	#[pallet::storage]
@@ -285,7 +283,10 @@ pub mod pallet {
 			// Only root can call
 			ensure_root(origin)?;
 			// Seed Trust validators number should be less than max validators
-			ensure!(num_validators <= TotalNumberOfValidators::<T>::get(), Error::<T>::SeedTrustExceedMaxValidators);
+			ensure!(
+				num_validators <= TotalNumberOfValidators::<T>::get(),
+				Error::<T>::SeedTrustExceedMaxValidators
+			);
 			NumberOfSeedTrustValidators::<T>::put(num_validators);
 			Self::deposit_event(Event::<T>::SeedTrustNumChanged);
 			Ok(())
@@ -305,10 +306,7 @@ pub mod pallet {
 
 		#[pallet::call_index(2)]
 		#[pallet::weight(0)]
-		pub fn add_seed_trust_validator(
-			origin: OriginFor<T>,
-			who: T::AccountId,
-		) -> DispatchResult {
+		pub fn add_seed_trust_validator(origin: OriginFor<T>, who: T::AccountId) -> DispatchResult {
 			// Only root can call
 			ensure_root(origin)?;
 			let mut seed_trust_validators = SeedTrustValidatorPool::<T>::get();

@@ -72,19 +72,19 @@ pub mod pallet {
 		AssetConverted {
 			para_id: ParachainId,
 			para_asset_id: ParachainAssetId,
-			relay_asset_id: RelayChainAssetId
+			relay_asset_id: RelayChainAssetId,
 		},
 
 		WeightAdjusted {
 			old_weight: VoteWeight,
 			adjusted_weight: VoteWeight,
-		}
+		},
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
 		AssetAlreadyRegistered,
-		AssetNotRegistered
+		AssetNotRegistered,
 	}
 
 	#[pallet::genesis_config]
@@ -123,7 +123,7 @@ pub mod pallet {
 	pub(super) type SystemTokenTable<T: Config> = StorageDoubleMap<
 		_,
 		Twox64Concat,
-		ParachainId, 
+		ParachainId,
 		Twox64Concat,
 		ParachainAssetId,
 		RelayChainAssetId,
@@ -146,7 +146,10 @@ pub mod pallet {
 			relay_asset_id: RelayChainAssetId,
 		) -> DispatchResult {
 			ensure_root(origin)?;
-			ensure!(!SystemTokenTable::<T>::contains_key(para_id, para_asset_id), Error::<T>::AssetAlreadyRegistered);
+			ensure!(
+				!SystemTokenTable::<T>::contains_key(para_id, para_asset_id),
+				Error::<T>::AssetAlreadyRegistered
+			);
 			SystemTokenTable::<T>::insert(para_id, para_asset_id, relay_asset_id);
 			Self::deposit_event(Event::<T>::AssetRegistered {
 				para_id,
@@ -160,7 +163,8 @@ pub mod pallet {
 
 impl<T: Config> Pallet<T> {
 	pub fn do_adjust_weight(weight: VoteWeight) -> VoteWeight {
-		// TODO: To be implemented for considering the exchange rate, fee per extrinsic call and etc.
+		// TODO: To be implemented for considering the exchange rate, fee per extrinsic call and
+		// etc.
 		weight
 	}
 }
@@ -172,15 +176,22 @@ impl<T: Config> SystemTokenInterface for Pallet<T> {
 		para_asset_id: ParachainAssetId,
 	) -> Option<RelayChainAssetId> {
 		if let Some(relay_asset_id) = <SystemTokenTable<T>>::get(para_id, para_asset_id) {
-			Self::deposit_event(Event::<T>::AssetConverted { para_id, para_asset_id, relay_asset_id, });
+			Self::deposit_event(Event::<T>::AssetConverted {
+				para_id,
+				para_asset_id,
+				relay_asset_id,
+			});
 			return Some(relay_asset_id)
-		} 
+		}
 		None
 	}
 
 	fn adjusted_weight(_asset_id: RelayChainAssetId, vote_weight: VoteWeight) -> VoteWeight {
 		let adjusted_weight = Self::do_adjust_weight(vote_weight);
-		Self::deposit_event(Event::<T>::WeightAdjusted { old_weight: vote_weight, adjusted_weight });
+		Self::deposit_event(Event::<T>::WeightAdjusted {
+			old_weight: vote_weight,
+			adjusted_weight,
+		});
 		adjusted_weight
 	}
 }

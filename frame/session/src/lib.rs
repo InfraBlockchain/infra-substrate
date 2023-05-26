@@ -569,7 +569,6 @@ pub mod pallet {
 		/// block of the current session.
 		fn on_initialize(n: T::BlockNumber) -> Weight {
 			if T::ShouldEndSession::should_end_session(n) {
-		
 				Self::rotate_session();
 				T::BlockWeights::get().max_block
 			} else {
@@ -631,7 +630,6 @@ impl<T: Config> Pallet<T> {
 	pub fn rotate_session() {
 		let session_index = <CurrentIndex<T>>::get();
 		log::trace!(target: "runtime::session", "rotating session {:?}", session_index);
-	
 
 		let changed = <QueuedChanged<T>>::get();
 

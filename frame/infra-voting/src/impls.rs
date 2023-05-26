@@ -1,4 +1,3 @@
-
 use crate::*;
 
 /// Means for interacting with a specialized version of the `session` trait.
@@ -60,12 +59,13 @@ impl<T: Config> VotingHandler<T> for () {
 //
 // 2. new_session_genesis()
 // - Called only once at genesis
-// - If there is no validator set returned, session pallet's config keys are used for initial validator set
+// - If there is no validator set returned, session pallet's config keys are used for initial
+//   validator set
 //
 // 3. start_session()
 // - Start a session potentially starting an era
 // - Internally `start_era()` is called when starting a new era
-// 
+//
 // 4. end_session()
 // - End a session potentially ending an era
 // - Internally `end_era()` is called when ending an era
@@ -87,7 +87,6 @@ impl<T: Config> pallet_session::SessionManager<T::AccountId> for Pallet<T> {
 }
 
 impl<T: Config> Pallet<T> {
-	
 	fn handle_new_session(
 		session_index: SessionIndex,
 		is_genesis: bool,
@@ -98,21 +97,21 @@ impl<T: Config> Pallet<T> {
 					frame_support::print("Error: start_session_index must be set for current_era");
 					0
 				});
-				let era_length = session_index.saturating_sub(start_session_index); // Must never happen.
+			let era_length = session_index.saturating_sub(start_session_index); // Must never happen.
 
-				match ForceEra::<T>::get() {
-					// Will be set to `NotForcing` again if a new era has been triggered.
-					Forcing::ForceNew => (),
-					// Short circuit to `try_trigger_new_era`.
-					Forcing::ForceAlways => (),
-					// Only go to `try_trigger_new_era` if deadline reached.
-					Forcing::NotForcing if era_length >= T::SessionsPerEra::get() => (),
-					_ => {
-						// Either `Forcing::ForceNone`,
-						// or `Forcing::NotForcing if era_length < T::SessionsPerEra::get()`.
-						return None
-					},
-				}
+			match ForceEra::<T>::get() {
+				// Will be set to `NotForcing` again if a new era has been triggered.
+				Forcing::ForceNew => (),
+				// Short circuit to `try_trigger_new_era`.
+				Forcing::ForceAlways => (),
+				// Only go to `try_trigger_new_era` if deadline reached.
+				Forcing::NotForcing if era_length >= T::SessionsPerEra::get() => (),
+				_ => {
+					// Either `Forcing::ForceNone`,
+					// or `Forcing::NotForcing if era_length < T::SessionsPerEra::get()`.
+					return None
+				},
+			}
 
 			// New era.
 			let maybe_new_era_validators = Self::do_trigger_new_era(session_index, is_genesis);
@@ -138,8 +137,8 @@ impl<T: Config> Pallet<T> {
 	///
 	/// Returns the new validator set.
 	fn do_trigger_new_era(
-		session_index: SessionIndex, 
-		_is_genesis: bool
+		session_index: SessionIndex,
+		_is_genesis: bool,
 	) -> Option<Vec<T::AccountId>> {
 		let new_planned_era = CurrentEra::<T>::mutate(|era| {
 			*era = Some(era.map(|old_era| old_era + 1).unwrap_or(0));
@@ -156,26 +155,31 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Elect validators from `SeedTrustValidatorPool::<T>` and `PotValidatorPool::<T>`
-	/// 
+	///
 	/// First, check the number of seed trust validator.
-	/// If it is equal to number of max validators, we just elect from `SeedTrustValidatorPool::<T>`.
-	/// Otherwise, remain number of validators are elected from `PotValidatorPool::<T>`.
-	pub fn elect_validators(
-		era_index: EraIndex
-	) -> Vec<T::AccountId> {
-
+	/// If it is equal to number of max validators, we just elect from
+	/// `SeedTrustValidatorPool::<T>`. Otherwise, remain number of validators are elected from
+	/// `PotValidatorPool::<T>`.
+	pub fn elect_validators(era_index: EraIndex) -> Vec<T::AccountId> {
 		let total_num_validators = TotalNumberOfValidators::<T>::get();
 		let num_seed_trust = NumberOfSeedTrustValidators::<T>::get();
 		let num_pot = total_num_validators - num_seed_trust;
 		let mut pot_enabled = false;
-		let mut validators: Vec<T::AccountId> = Self::do_elect_seed_trust_validators(num_seed_trust);
+		let mut validators: Vec<T::AccountId> =
+			Self::do_elect_seed_trust_validators(num_seed_trust);
 		if num_pot != 0 {
 			let mut pot_validators = Self::do_elect_pot_validators(era_index, num_pot);
 			pot_enabled = true;
 			validators.append(&mut pot_validators);
 		}
-		assert!(validators.len() <= total_num_validators as usize, "Should be less or equal to total number of validators");
-		Self::deposit_event(Event::<T>::ValidatorsElected { validators: validators.clone(), pot_enabled });
+		assert!(
+			validators.len() <= total_num_validators as usize,
+			"Should be less or equal to total number of validators"
+		);
+		Self::deposit_event(Event::<T>::ValidatorsElected {
+			validators: validators.clone(),
+			pot_enabled,
+		});
 		validators
 	}
 
@@ -190,14 +194,16 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn do_elect_pot_validators(era_index: EraIndex, num_pot: u32) -> Vec<T::AccountId> {
-		// PoT election phase 
+		// PoT election phase
 		let mut voting_status = PotValidatorPool::<T>::get();
 		voting_status.sort_by_vote_points();
 		let pot_validators = voting_status.top_validators(num_pot).clone();
 		PotValidators::<T>::insert(era_index, pot_validators.clone());
 		let pot_num = PotValidators::<T>::get(era_index).len();
-		Self::deposit_event(Event::<T>::PotValidatorsElected { num: pot_num as u32 } );
-		pot_validators.try_into().expect("Should be less than total number of validators")
+		Self::deposit_event(Event::<T>::PotValidatorsElected { num: pot_num as u32 });
+		pot_validators
+			.try_into()
+			.expect("Should be less than total number of validators")
 	}
 
 	/// Helper to set a new `ForceEra` mode.
