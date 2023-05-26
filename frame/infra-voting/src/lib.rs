@@ -185,8 +185,11 @@ pub mod pallet {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			SeedTrustValidatorPool::<T>::put(self.seed_trust_validators.clone());
-			TotalNumberOfValidators::<T>::put(self.total_number_of_validators);
-			NumberOfSeedTrustValidators::<T>::put(self.number_of_seed_trust_validators);
+			TotalNumberOfValidators::<T>::put(self.total_number_of_validators.clone());
+			NumberOfSeedTrustValidators::<T>::put(self.number_of_seed_trust_validators.clone());
+			log!(info, "Total Num Vals {:?}.", self.total_number_of_validators);
+			log!(info, "Num seed {:?}.", self.number_of_seed_trust_validators);
+			log!(info, "Seed Trust {:?}.", self.seed_trust_validators);
 			ForceEra::<T>::put(self.force_era);
 			if self.is_pot_enable_at_genesis {
 				assert!(self.vote_status_at_genesis.len() > 0, "Vote status should not be empty");
