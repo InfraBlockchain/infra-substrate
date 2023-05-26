@@ -1,17 +1,17 @@
-
+use crate::{self as pallet_infra_voting, *};
 use frame_support::{
 	parameter_types,
-	traits::{ConstU32, ConstU64, GenesisBuild, OneSessionHandler, Hooks},
+	traits::{ConstU32, ConstU64, GenesisBuild, Hooks, OneSessionHandler},
+};
+use sp_core::{ByteArray, H256};
+use sp_keyring::Sr25519Keyring::*;
+use sp_runtime::{
+	generic::{VoteAccountId, VoteWeight},
+	testing::Header,
+	traits::{BlakeTwo256, Convert, IdentityLookup},
+	AccountId32,
 };
 use std::collections::BTreeMap;
-use sp_core::{H256, ByteArray};
-use sp_runtime::{
-	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup, Convert}, generic::{VoteAccountId, VoteWeight},
-    AccountId32,
-};
-use sp_keyring::Sr25519Keyring::*;
-use crate::{self as pallet_infra_voting, *};
 
 pub const BLOCK_TIME: u64 = 1000;
 
@@ -24,15 +24,15 @@ pub(crate) type Balance = u128;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<TestRuntime>;
 type Block = frame_system::mocking::MockBlock<TestRuntime>;
 frame_support::construct_runtime!(
-    pub enum TestRuntime where
-        Block = Block,
-        NodeBlock = Block,
-        UncheckedExtrinsic = UncheckedExtrinsic,
-    {
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-        Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
-        InfraVoting: pallet_infra_voting::{Pallet, Call, Storage, Config<T>, Event<T>},
-    }
+	pub enum TestRuntime where
+		Block = Block,
+		NodeBlock = Block,
+		UncheckedExtrinsic = UncheckedExtrinsic,
+	{
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
+		InfraVoting: pallet_infra_voting::{Pallet, Call, Storage, Config<T>, Event<T>},
+	}
 );
 
 impl frame_system::Config for TestRuntime {
@@ -63,18 +63,18 @@ impl frame_system::Config for TestRuntime {
 }
 
 parameter_types! {
-    pub static TotalNumberOfValidators: u32 = 5;
-    pub static MinVotePointsThreshold: u32 = 1;
-    pub static SessionsPerEra: u32 = 5;
+	pub static TotalNumberOfValidators: u32 = 5;
+	pub static MinVotePointsThreshold: u32 = 1;
+	pub static SessionsPerEra: u32 = 5;
 }
 
 impl pallet_infra_voting::Config for TestRuntime {
-    type RuntimeEvent = RuntimeEvent;
-    type SessionsPerEra = SessionsPerEra;
-    type InfraVoteAccountId = VoteAccountId;
-    type InfraVotePoints = VoteWeight;
-    type NextNewSession = Session;
-    type SessionInterface = ();
+	type RuntimeEvent = RuntimeEvent;
+	type SessionsPerEra = SessionsPerEra;
+	type InfraVoteAccountId = VoteAccountId;
+	type InfraVotePoints = VoteWeight;
+	type NextNewSession = Session;
+	type SessionInterface = ();
 }
 
 parameter_types! {
@@ -84,8 +84,8 @@ parameter_types! {
 pub const KEY_TYPE: sp_core::crypto::KeyTypeId = sp_application_crypto::key_types::DUMMY;
 
 mod app {
-    use sp_application_crypto::{app_crypto, key_types::DUMMY, sr25519};
-    app_crypto!(sr25519, DUMMY);
+	use sp_application_crypto::{app_crypto, key_types::DUMMY, sr25519};
+	app_crypto!(sr25519, DUMMY);
 }
 
 pub type MockAuthorityId = app::Public;
@@ -136,15 +136,15 @@ impl Convert<AccountId, Option<AccountId>> for TestValidatorIdOf {
 }
 
 parameter_types! {
-    // Only for test
-    pub static Period: BlockNumber = 5;
-    pub static Offset: BlockNumber = 0;
+	// Only for test
+	pub static Period: BlockNumber = 5;
+	pub static Offset: BlockNumber = 0;
 }
 impl pallet_session::Config for TestRuntime {
 	type RuntimeEvent = RuntimeEvent;
-    type Keys = SessionKeys;
+	type Keys = SessionKeys;
 	type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
-    type SessionManager = InfraVoting;
+	type SessionManager = InfraVoting;
 	type SessionHandler = (OtherSessionHandler,);
 	type ValidatorId = AccountId;
 	type ValidatorIdOf = TestValidatorIdOf;
@@ -155,119 +155,114 @@ impl pallet_session::Config for TestRuntime {
 pub struct ExtBuilder {
 	total_number_of_validators: u32,
 	number_of_seed_trust_validators: u32,
-    seed_trust_validators: Vec<AccountId>,
-    initialize_first_session: bool,
-    is_pot_enable_at_genesis: bool,
-    vote_status: Vec<(VoteAccountId, VoteWeight)>
+	seed_trust_validators: Vec<AccountId>,
+	initialize_first_session: bool,
+	is_pot_enable_at_genesis: bool,
+	vote_status: Vec<(VoteAccountId, VoteWeight)>,
 }
 
 impl Default for ExtBuilder {
-    fn default() -> Self {
-        Self {
-            total_number_of_validators: 3,
-            number_of_seed_trust_validators: 3,
-            seed_trust_validators: vec![],
-            initialize_first_session: true,
-            is_pot_enable_at_genesis: false,
-            vote_status: vec![]
-        }
-    }
+	fn default() -> Self {
+		Self {
+			total_number_of_validators: 3,
+			number_of_seed_trust_validators: 3,
+			seed_trust_validators: vec![],
+			initialize_first_session: true,
+			is_pot_enable_at_genesis: false,
+			vote_status: vec![],
+		}
+	}
 }
 
-impl ExtBuilder{
-    pub fn total_number_of_validators(mut self, total_num: u32) -> Self {
-        self.total_number_of_validators = total_num;
-        self
-    } 
+impl ExtBuilder {
+	pub fn total_number_of_validators(mut self, total_num: u32) -> Self {
+		self.total_number_of_validators = total_num;
+		self
+	}
 
-    pub fn number_of_seed_trust_validators(mut self, total_num: u32) -> Self {
-        self.number_of_seed_trust_validators = total_num;
-        self
-    }
+	pub fn number_of_seed_trust_validators(mut self, total_num: u32) -> Self {
+		self.number_of_seed_trust_validators = total_num;
+		self
+	}
 
-    pub fn seed_trust_validators(mut self, seed_trust_validators: Vec<AccountId>) -> Self {
-        self.seed_trust_validators = seed_trust_validators;
-        self
-    }
+	pub fn seed_trust_validators(mut self, seed_trust_validators: Vec<AccountId>) -> Self {
+		self.seed_trust_validators = seed_trust_validators;
+		self
+	}
 
-    pub fn initialize_fist_session(mut self, init: bool) -> Self {
-        self.initialize_first_session = init;
-        self
-    }
+	pub fn initialize_fist_session(mut self, init: bool) -> Self {
+		self.initialize_first_session = init;
+		self
+	}
 
-    pub fn pot_enable(mut self, is_enable: bool) -> Self {
-        self.is_pot_enable_at_genesis = is_enable;
-        self
-    }
+	pub fn pot_enable(mut self, is_enable: bool) -> Self {
+		self.is_pot_enable_at_genesis = is_enable;
+		self
+	}
 
-    pub fn vote_status(mut self, create_mock_vote_status: impl FnOnce() -> MockVoteStatus) -> Self {
-        let vote_status = create_mock_vote_status();
-        self.vote_status = vote_status.0;
-        self
-    }
+	pub fn vote_status(mut self, create_mock_vote_status: impl FnOnce() -> MockVoteStatus) -> Self {
+		let vote_status = create_mock_vote_status();
+		self.vote_status = vote_status.0;
+		self
+	}
 
-    fn app_public(keyring: sp_keyring::Sr25519Keyring) -> app::Public {
-        match keyring {
-            Alice => app::Public::from_slice(&[0; 32]).unwrap(),
-            Bob => app::Public::from_slice(&[1; 32]).unwrap(),
-            Charlie => app::Public::from_slice(&[2; 32]).unwrap(),
-            Dave => app::Public::from_slice(&[3; 32]).unwrap(),
-            Eve => app::Public::from_slice(&[4; 32]).unwrap(),
-            Ferdie => app::Public::from_slice(&[5; 32]).unwrap(),
-            _ => app::Public::from_slice(&[6; 32]).unwrap(),
-        }
-    }
+	fn app_public(keyring: sp_keyring::Sr25519Keyring) -> app::Public {
+		match keyring {
+			Alice => app::Public::from_slice(&[0; 32]).unwrap(),
+			Bob => app::Public::from_slice(&[1; 32]).unwrap(),
+			Charlie => app::Public::from_slice(&[2; 32]).unwrap(),
+			Dave => app::Public::from_slice(&[3; 32]).unwrap(),
+			Eve => app::Public::from_slice(&[4; 32]).unwrap(),
+			Ferdie => app::Public::from_slice(&[5; 32]).unwrap(),
+			_ => app::Public::from_slice(&[6; 32]).unwrap(),
+		}
+	}
 
-    fn build(self) -> sp_io::TestExternalities {
-       
-        let mut storage = frame_system::GenesisConfig::default()
-            .build_storage::<TestRuntime>()
-            .unwrap();
+	fn build(self) -> sp_io::TestExternalities {
+		let mut storage =
+			frame_system::GenesisConfig::default().build_storage::<TestRuntime>().unwrap();
 
-        let seed_trust_validators = vec![
-            Alice.to_account_id(),
-            Bob.to_account_id(),
-            Charlie.to_account_id(),
-        ];
-        let account_keyring = vec! [
-            Alice, Bob, Charlie, Dave, Eve, Ferdie
-        ];
+		let seed_trust_validators =
+			vec![Alice.to_account_id(), Bob.to_account_id(), Charlie.to_account_id()];
+		let account_keyring = vec![Alice, Bob, Charlie, Dave, Eve, Ferdie];
 
-        let _ = pallet_infra_voting::GenesisConfig::<TestRuntime> {
-            seed_trust_validators: seed_trust_validators.clone(),
-            total_number_of_validators: self.total_number_of_validators,
-            number_of_seed_trust_validators: self.number_of_seed_trust_validators,
-            is_pot_enable_at_genesis: self.is_pot_enable_at_genesis,
-            vote_status_at_genesis: self.vote_status,
-            ..Default::default()
-        }
-        .assimilate_storage(&mut storage);
+		let _ = pallet_infra_voting::GenesisConfig::<TestRuntime> {
+			seed_trust_validators: seed_trust_validators.clone(),
+			total_number_of_validators: self.total_number_of_validators,
+			number_of_seed_trust_validators: self.number_of_seed_trust_validators,
+			is_pot_enable_at_genesis: self.is_pot_enable_at_genesis,
+			vote_status_at_genesis: self.vote_status,
+			..Default::default()
+		}
+		.assimilate_storage(&mut storage);
 
-        let _ = pallet_session::GenesisConfig::<TestRuntime> {
-            keys: seed_trust_validators
-                .into_iter()
-                .zip(account_keyring)
-                .map(|(id, keyring)| (id.clone(), id.clone(), SessionKeys { other: Self::app_public(keyring) }))
-                .collect()
-        }
-        .assimilate_storage(&mut storage);
+		let _ = pallet_session::GenesisConfig::<TestRuntime> {
+			keys: seed_trust_validators
+				.into_iter()
+				.zip(account_keyring)
+				.map(|(id, keyring)| {
+					(id.clone(), id.clone(), SessionKeys { other: Self::app_public(keyring) })
+				})
+				.collect(),
+		}
+		.assimilate_storage(&mut storage);
 
-        let mut ext = sp_io::TestExternalities::from(storage);
+		let mut ext = sp_io::TestExternalities::from(storage);
 
-        if self.initialize_first_session {
-            ext.execute_with(|| {
-                System::set_block_number(1);
-                <Session as Hooks<BlockNumber>>::on_initialize(1);
-            });
-        }
-        ext
-    }
+		if self.initialize_first_session {
+			ext.execute_with(|| {
+				System::set_block_number(1);
+				<Session as Hooks<BlockNumber>>::on_initialize(1);
+			});
+		}
+		ext
+	}
 
-    pub fn build_and_execute(self, test: impl FnOnce() -> ()) {
-        let mut ext = self.build();
-        
-        ext.execute_with(test);
-    }
+	pub fn build_and_execute(self, test: impl FnOnce() -> ()) {
+		let mut ext = self.build();
+
+		ext.execute_with(test);
+	}
 }
 
 /// Progress to the given block, triggering session and era changes as we progress.
@@ -276,7 +271,6 @@ impl ExtBuilder{
 /// a block import/propose process where we first initialize the block, then execute some stuff (not
 /// in the function), and then finalize the block.
 pub(crate) fn progress_block(n: BlockNumber) {
-
 	for b in (System::block_number() + 1)..=n {
 		System::set_block_number(b);
 		Session::on_initialize(b);
@@ -293,59 +287,55 @@ pub(crate) fn progress_session(session_index: SessionIndex) {
 pub struct MockVoteStatus(pub Vec<(VoteAccountId, VoteWeight)>);
 
 impl Default for MockVoteStatus {
-    fn default() -> Self {
-        Self(vec![])
-    }
+	fn default() -> Self {
+		Self(vec![])
+	}
 }
 
 impl From<MockVoteStatus> for VotingStatus<TestRuntime> {
-    fn from(value: MockVoteStatus) -> Self {
-        Self {
-            status: value.0
-        }
-    }
+	fn from(value: MockVoteStatus) -> Self {
+		Self { status: value.0 }
+	}
 }
 
 impl MockVoteStatus {
+	fn create_mock_account(num: usize) -> Vec<VoteAccountId> {
+		let mut mock_accounts = vec![];
+		let accounts = vec![Dave, Ferdie, Eve];
+		for i in 0..num {
+			mock_accounts.push(accounts[i].to_account_id());
+		}
+		mock_accounts
+	}
 
-    fn create_mock_account(num: usize) -> Vec<VoteAccountId> {
-        let mut mock_accounts = vec![];
-        let accounts = vec![Dave, Ferdie, Eve];
-        for i in 0..num {
-            mock_accounts.push(accounts[i].to_account_id());
-        }
-        mock_accounts
-    }
+	pub fn create_mock_pot(num: usize, is_over_min: bool) -> Self {
+		let mut mock_pot = vec![];
+		let mock_accounts = Self::create_mock_account(num);
+		mock_accounts.into_iter().for_each(|acc| {
+			let min_threshold = MinVotePointsThreshold::get();
+			let vote_point = if !is_over_min && acc == Dave.to_account_id() {
+				min_threshold - 1
+			} else {
+				min_threshold + 1
+			};
+			mock_pot.push((acc, vote_point as VoteWeight));
+		});
+		Self(mock_pot)
+	}
 
-    pub fn create_mock_pot(num: usize, is_over_min: bool) -> Self {
-        let mut mock_pot = vec![];
-        let mock_accounts = Self::create_mock_account(num);
-        mock_accounts.into_iter().for_each(|acc| {
-            let min_threshold = MinVotePointsThreshold::get();
-            let vote_point = if !is_over_min && acc == Dave.to_account_id() {
-                min_threshold - 1
-            } else {
-                min_threshold + 1 
-            };
-            mock_pot.push((acc, vote_point as VoteWeight));
-        });
-        Self(mock_pot)
-    }
-
-    pub fn increase_vote_point(&mut self, who: VoteAccountId) {
-        self.0.iter_mut().for_each(|vote_status| {
-            if vote_status.0 == who {
-                vote_status.1 += 1;
-            }
-        })
-    }
+	pub fn increase_vote_point(&mut self, who: VoteAccountId) {
+		self.0.iter_mut().for_each(|vote_status| {
+			if vote_status.0 == who {
+				vote_status.1 += 1;
+			}
+		})
+	}
 }
 /// There will be three candidates for testing
 /// Dave, Eve, Ferdie
 pub(crate) fn create_mock_vote_status(num: usize, is_over_min: bool) -> MockVoteStatus {
-    
-    MockVoteStatus::create_mock_pot(num, is_over_min)
-} 
+	MockVoteStatus::create_mock_pot(num, is_over_min)
+}
 
 pub(crate) fn infra_voting_events() -> Vec<crate::Event<TestRuntime>> {
 	System::events()
