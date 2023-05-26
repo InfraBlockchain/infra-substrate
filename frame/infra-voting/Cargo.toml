@@ -26,7 +26,7 @@ sp-std = { version = "5.0.0", default-features = false, path = "../../primitives
 
 [dev-dependencies]
 sp-tracing = { version = "6.0.0", path = "../../primitives/tracing" }
-sp-keyring = { version = "7.0.0", default-features = false, path = "../../primitives/keyring" }
+sp-keyring = { version = "7.0.0", path = "../../primitives/keyring" }
 
 [features]
 default = ["std"]
