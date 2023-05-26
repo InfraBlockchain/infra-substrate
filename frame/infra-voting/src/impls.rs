@@ -1,7 +1,6 @@
 
 use crate::*;
 
-pub type TotalNumValidatorsOf<T> = <T as Config>::TotalNumberOfValidators;
 /// Means for interacting with a specialized version of the `session` trait.
 pub trait SessionInterface<AccountId> {
 	/// Disable the validator at the given index, returns `false` if the validator was already
@@ -26,21 +25,22 @@ impl<AccountId> SessionInterface<AccountId> for () {
 }
 
 pub trait VotingHandler<T> {
-	fn update_vote_status(era_index: SessionIndex, who: VoteAccountId, weight: VoteWeight);
+	fn update_vote_status(who: VoteAccountId, weight: VoteWeight);
 }
 
 impl<T: Config> VotingHandler<T> for Pallet<T> {
-	fn update_vote_status(era_index: SessionIndex, who: VoteAccountId, weight: VoteWeight) {
+	fn update_vote_status(who: VoteAccountId, weight: VoteWeight) {
 		let vote_account_id: T::InfraVoteAccountId = who.into();
 		let vote_points: T::InfraVotePoints = weight.into();
 
-		let mut vote_status = VotingStatusPerEra::<T>::get(&era_index);
+		let mut vote_status = PotValidatorPool::<T>::get();
 		vote_status.add_points(&vote_account_id, vote_points);
+		PotValidatorPool::<T>::put(vote_status);
 	}
 }
 
 impl<T: Config> VotingHandler<T> for () {
-	fn update_vote_status(_: SessionIndex, _: VoteAccountId, _: VoteWeight) {}
+	fn update_vote_status(_: VoteAccountId, _: VoteWeight) {}
 }
 
 // Session Pallet Rotate Order
@@ -72,11 +72,11 @@ impl<T: Config> VotingHandler<T> for () {
 impl<T: Config> pallet_session::SessionManager<T::AccountId> for Pallet<T> {
 	fn new_session(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
 		log!(trace, "planning new session {}", new_index);
-		Self::handle_new_session(new_index, false).map(|v| v.into_inner())
+		Self::handle_new_session(new_index, false)
 	}
 	fn new_session_genesis(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
 		log!(trace, "planning new session {} at genesis", new_index);
-		Self::handle_new_session(new_index, true).map(|v| v.into_inner())
+		Self::handle_new_session(new_index, true)
 	}
 	fn start_session(start_index: SessionIndex) {
 		log!(trace, "starting session {}", start_index);
@@ -91,7 +91,7 @@ impl<T: Config> Pallet<T> {
 	fn handle_new_session(
 		session_index: SessionIndex,
 		is_genesis: bool,
-	) -> Option<BoundedVec<T::AccountId, TotalNumValidatorsOf<T>>> {
+	) -> Option<Vec<T::AccountId>> {
 		if let Some(current_era) = CurrentEra::<T>::get() {
 			let start_session_index = StartSessionIndexPerEra::<T>::get(current_era)
 				.unwrap_or_else(|| {
@@ -140,14 +140,13 @@ impl<T: Config> Pallet<T> {
 	fn do_trigger_new_era(
 		session_index: SessionIndex, 
 		_is_genesis: bool
-	) -> Option<BoundedVec<T::AccountId, TotalNumValidatorsOf<T>>> {
-		
+	) -> Option<Vec<T::AccountId>> {
 		let new_planned_era = CurrentEra::<T>::mutate(|era| {
-			*era = Some(era.map(|old_era| old_era+1).unwrap_or(0));
+			*era = Some(era.map(|old_era| old_era + 1).unwrap_or(0));
 			era.unwrap()
 		});
 		StartSessionIndexPerEra::<T>::insert(&new_planned_era, session_index);
-		Some(Self::elect_validators(session_index))
+		Some(Self::elect_validators(new_planned_era))
 
 		// Clean old era information.
 		// Later
@@ -163,14 +162,9 @@ impl<T: Config> Pallet<T> {
 	/// Otherwise, remain number of validators are elected from `PotValidatorPool::<T>`.
 	pub fn elect_validators(
 		era_index: EraIndex
-	) -> BoundedVec<T::AccountId, TotalNumValidatorsOf<T>> {
+	) -> Vec<T::AccountId> {
 
-		let validators = Self::do_elect_validators(era_index);
-		validators.try_into().expect("Should be equal to total number of validators")
-	}
-
-	fn do_elect_validators(era_index: EraIndex) -> Vec<T::AccountId> {
-		let total_num_validators = T::TotalNumberOfValidators::get();
+		let total_num_validators = TotalNumberOfValidators::<T>::get();
 		let num_seed_trust = NumberOfSeedTrustValidators::<T>::get();
 		let num_pot = total_num_validators - num_seed_trust;
 		let mut pot_enabled = false;
@@ -181,7 +175,7 @@ impl<T: Config> Pallet<T> {
 			validators.append(&mut pot_validators);
 		}
 		assert!(validators.len() <= total_num_validators as usize, "Should be less or equal to total number of validators");
-		Self::deposit_event(Event::<T>::ValidatorsElected { pot_enabled });
+		Self::deposit_event(Event::<T>::ValidatorsElected { validators: validators.clone(), pot_enabled });
 		validators
 	}
 
@@ -197,10 +191,12 @@ impl<T: Config> Pallet<T> {
 
 	fn do_elect_pot_validators(era_index: EraIndex, num_pot: u32) -> Vec<T::AccountId> {
 		// PoT election phase 
-		let mut voting_status = VotingStatusPerEra::<T>::get(&era_index);
+		let mut voting_status = PotValidatorPool::<T>::get();
 		voting_status.sort_by_vote_points();
-		let pot_validators = voting_status.get_top_validators(num_pot).clone();
-		Self::deposit_event(Event::<T>::PotValidatorsElected);
+		let pot_validators = voting_status.top_validators(num_pot).clone();
+		PotValidators::<T>::insert(era_index, pot_validators.clone());
+		let pot_num = PotValidators::<T>::get(era_index).len();
+		Self::deposit_event(Event::<T>::PotValidatorsElected { num: pot_num as u32 } );
 		pot_validators.try_into().expect("Should be less than total number of validators")
 	}
 

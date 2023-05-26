@@ -4,10 +4,7 @@ pub mod impls;
 pub use impls::*;
 
 use codec::{Decode, Encode, MaxEncodedLen};
-use frame_support::{
-	traits::{EstimateNextNewSession, Get},
-	BoundedVec,
-};
+use frame_support::traits::{EstimateNextNewSession, Get};
 pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_runtime::{
@@ -15,6 +12,12 @@ use sp_runtime::{
 	traits::MaybeDisplay,
 	RuntimeDebug, Saturating,
 };
+
+#[cfg(test)]
+mod tests; 
+
+#[cfg(test)]
+pub mod mock;
 
 use sp_std::prelude::*;
 
@@ -37,7 +40,7 @@ macro_rules! log {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-// #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 pub enum Forcing {
 	/// Not forcing anything - just let whatever happen.
 	NotForcing,
@@ -63,6 +66,7 @@ pub struct VotingStatus<T: Config> {
 	pub status: Vec<(T::InfraVoteAccountId, T::InfraVotePoints)>,
 }
 
+
 impl<T: Config> Default for VotingStatus<T> {
 	fn default() -> Self {
 		Self { status: Default::default() }
@@ -81,6 +85,10 @@ impl<T: Config> VotingStatus<T> {
 		self.status.push((who.clone(), vote_points.into()));
 	}
 
+	pub fn counts(&self) -> usize {
+		self.status.len()
+	}
+
 	/// Sort vote status for decreasing order
 	pub fn sort_by_vote_points(&mut self) {
 		self.status.sort_by(|x, y| y.1.cmp(&x.1));
@@ -91,11 +99,11 @@ impl<T: Config> VotingStatus<T> {
 	/// 
 	/// Note: 
 	/// This function should be called after `sort_by_vote_points` is called.
-	pub fn get_top_validators(&mut self, num: u32) -> Vec<T::AccountId> {
+	pub fn top_validators(&mut self, num: u32) -> Vec<T::AccountId> {
 		self.status
 			.iter()
 			.take(num as usize)
-			.filter(|vote_status| vote_status.1 >= T::MinVotePointsThreshold::get().into())
+			.filter(|vote_status| vote_status.1 >= MinVotePointsThreshold::<T>::get().into())
 			.map(|vote_status| vote_status.0.clone().into())
 			.collect()
 	}  
@@ -115,15 +123,6 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		/// The overarching event type.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-
-		/// Total Number of validators that can be elected, 
-		/// which is composed of seed trust validators and pot validators
-		#[pallet::constant]
-		type TotalNumberOfValidators: Get<u32>;
-
-		/// Minimum vote points to be elected
-		#[pallet::constant]
-		type MinVotePointsThreshold: Get<u32>;
 
 		/// Number of sessions per era.
 		#[pallet::constant]
@@ -159,6 +158,49 @@ pub mod pallet {
 		type SessionInterface: SessionInterface<Self::AccountId>;
 	}
 
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config> {
+		pub seed_trust_validators: Vec<T::AccountId>,
+		pub total_number_of_validators: u32,
+		pub number_of_seed_trust_validators: u32,
+		pub force_era: Forcing,
+		pub is_pot_enable_at_genesis: bool,
+		pub vote_status_at_genesis: Vec<(T::InfraVoteAccountId, T::InfraVotePoints)>
+	}
+
+	#[cfg(feature = "std")]
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			GenesisConfig {
+				is_pot_enable_at_genesis: false,
+				seed_trust_validators: Default::default(),
+				total_number_of_validators: Default::default(),	
+				number_of_seed_trust_validators: Default::default(),
+				force_era: Default::default(),
+				vote_status_at_genesis: Default::default(),
+			}
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+		fn build(&self) {
+			SeedTrustValidatorPool::<T>::put(self.seed_trust_validators.clone());
+			TotalNumberOfValidators::<T>::put(self.total_number_of_validators);
+			NumberOfSeedTrustValidators::<T>::put(self.number_of_seed_trust_validators);
+			ForceEra::<T>::put(self.force_era);
+			if self.is_pot_enable_at_genesis {
+				assert!(self.vote_status_at_genesis.len() > 0, "Vote status should not be empty");
+				let mut vote_status = VotingStatus::<T>::default();
+				self.vote_status_at_genesis.clone().into_iter().for_each(|v| {
+					vote_status.add_points(&v.0, v.1);
+				});
+				PotValidatorPool::<T>::put(vote_status);
+			}
+			assert!(NumberOfSeedTrustValidators::<T>::get() <= TotalNumberOfValidators::<T>::get());
+		}
+	}
+
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {
@@ -169,11 +211,11 @@ pub mod pallet {
 		/// Seed trust validator has been added to the pool
 		SeedTrustAdded { who: T::AccountId },
 		/// Validator have been elected
-		ValidatorsElected { pot_enabled: bool }, 
+		ValidatorsElected { validators: Vec<T::AccountId>, pot_enabled: bool }, 
 		/// Seed Trust validators have been elected
 		SeedTrustValidatorsElected,
 		/// Validators have been elected by PoT
-		PotValidatorsElected,
+		PotValidatorsElected { num: u32 },
 		/// A new force era mode was set.
 		ForceEra { mode: Forcing },
 	}
@@ -191,21 +233,10 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type CurrentEra<T> = StorageValue<_, EraIndex, OptionQuery>;
 
-	// Voting status for each era
+	// Pot pool that tracks all the candidate validators who have been voted
 	#[pallet::storage]
 	#[pallet::unbounded]
-	pub type VotingStatusPerEra<T: Config> = StorageMap<
-		_,
-		Twox64Concat,
-		EraIndex,
-		VotingStatus<T>,
-		ValueQuery,
-	>;
-
-	// Current validators that are composed of seed trust validators and optional pot validators
-	#[pallet::storage]
-	pub type ValidatorPool<T: Config> =
-		StorageValue<_, BoundedVec<T::AccountId, T::TotalNumberOfValidators>, ValueQuery>;
+	pub type PotValidatorPool<T: Config> = StorageValue<_, VotingStatus<T>, ValueQuery>;
 
 	// Validators set of Seed Trust
 	#[pallet::storage]
@@ -213,10 +244,24 @@ pub mod pallet {
 	pub type SeedTrustValidatorPool<T: Config> =
 		StorageValue<_, Vec<T::AccountId>, ValueQuery>;
 
+	/// Validators which have been elected by PoT at certain era index
+	#[pallet::storage]
+	#[pallet::unbounded]
+	pub type PotValidators<T: Config> =
+		StorageMap<_, Twox64Concat, EraIndex, Vec<T::AccountId>, ValueQuery>;
+
 	/// Number of seed trust validators that can be elected
 	#[pallet::storage]
 	pub type NumberOfSeedTrustValidators<T: Config> = 
 		StorageValue<_, u32, ValueQuery>;
+
+	/// Total Number of validators that can be elected, 
+	/// which is composed of seed trust validators and pot validators
+	#[pallet::storage]
+	pub type TotalNumberOfValidators<T: Config> = StorageValue<_, u32, ValueQuery>;
+
+	#[pallet::storage]
+	pub type MinVotePointsThreshold<T: Config> = StorageValue<_, VoteWeight, ValueQuery>;
 	
 	/// Start Session index for era
 	#[pallet::storage]
@@ -240,13 +285,25 @@ pub mod pallet {
 			// Only root can call
 			ensure_root(origin)?;
 			// Seed Trust validators number should be less than max validators
-			ensure!(num_validators <= T::TotalNumberOfValidators::get(), Error::<T>::SeedTrustExceedMaxValidators);
+			ensure!(num_validators <= TotalNumberOfValidators::<T>::get(), Error::<T>::SeedTrustExceedMaxValidators);
 			NumberOfSeedTrustValidators::<T>::put(num_validators);
 			Self::deposit_event(Event::<T>::SeedTrustNumChanged);
 			Ok(())
 		}
 
 		#[pallet::call_index(1)]
+		#[pallet::weight(0)]
+		pub fn set_total_number_of_validators(
+			origin: OriginFor<T>,
+			num_validators: u32,
+		) -> DispatchResult {
+			// Only root can call
+			ensure_root(origin)?;
+			TotalNumberOfValidators::<T>::put(num_validators);
+			Ok(())
+		}
+
+		#[pallet::call_index(2)]
 		#[pallet::weight(0)]
 		pub fn add_seed_trust_validator(
 			origin: OriginFor<T>,
