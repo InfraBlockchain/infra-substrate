@@ -308,6 +308,8 @@ pub mod pallet {
 		) -> DispatchResult {
 			// Only root can call
 			ensure_root(origin)?;
+			let num_seed_trust = NumberOfSeedTrustValidators::<T>::get();
+			ensure!(num_validators >= num_seed_trust, Error::<T>::SeedTrustExceedMaxValidators);
 			TotalNumberOfValidators::<T>::put(num_validators);
 			Ok(())
 		}

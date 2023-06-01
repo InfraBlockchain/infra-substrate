@@ -206,13 +206,13 @@ impl<T: Config> Pallet<T> {
 
 	fn do_elect_seed_trust_validators(num_seed_trust: u32) -> Vec<T::AccountId> {
 		let seed_trust_validators = SeedTrustValidatorPool::<T>::get();
-		Self::deposit_event(Event::<T>::SeedTrustValidatorsElected { validators: seed_trust_validators.clone(), num: seed_trust_validators.len() as u32 });
 		let res = seed_trust_validators
 			.iter()
 			.take(num_seed_trust as usize)
 			.cloned()
 			.collect::<Vec<_>>();
 		log!(info, "🫣🫣🫣 Seed Trust -> Validators {:?}", res.clone());
+		Self::deposit_event(Event::<T>::SeedTrustValidatorsElected { validators: seed_trust_validators.clone(), num: res.len() as u32 });
 		res
 	}
 
