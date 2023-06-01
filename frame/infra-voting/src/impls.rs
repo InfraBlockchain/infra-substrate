@@ -182,7 +182,9 @@ impl<T: Config> Pallet<T> {
 		let mut pot_enabled = false;
 		let mut validators: Vec<T::AccountId> =
 			Self::do_elect_seed_trust_validators(num_seed_trust);
-		log!(info, "🫣🫣🫣 Elected! -> Validators {:?}", validators.clone());
+		for v in validators.clone() {
+			log!(info, "🫣🫣🫣 Elected! -> Validators {:?}", v);
+		}
 		if num_pot != 0 {
 			let mut pot_validators = Self::do_elect_pot_validators(era_index, num_pot);
 			log!(info, "🫣🫣🫣 PoT! -> Validators {:?}", pot_validators.clone());
