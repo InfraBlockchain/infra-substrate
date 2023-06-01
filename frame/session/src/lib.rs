@@ -656,7 +656,7 @@ impl<T: Config> Pallet<T> {
 
 		// Get next validator set.
 		let maybe_next_validators = T::SessionManager::new_session(session_index + 1);
-		log::info!(
+		log::debug!(
 			target: "runtime::session",
 			"validators -> {:?}",
 			maybe_next_validators

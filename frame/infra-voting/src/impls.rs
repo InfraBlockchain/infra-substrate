@@ -183,14 +183,14 @@ impl<T: Config> Pallet<T> {
 		let mut validators: Vec<T::AccountId> =
 			Self::do_elect_seed_trust_validators(num_seed_trust);
 		for v in validators.clone() {
-			log!(info, "🫣🫣🫣 Elected! -> Validators {:?}", v);
+			log!(debug, "🫣🫣🫣 Elected! -> Validators {:?}", v);
 		}
 		if num_pot != 0 {
 			let mut pot_validators = Self::do_elect_pot_validators(era_index, num_pot);
-			log!(info, "🫣🫣🫣 PoT! -> Validators {:?}", pot_validators.clone());
+			log!(debug, "🫣🫣🫣 PoT! -> Validators {:?}", pot_validators.clone());
 			pot_enabled = true;
 			validators.append(&mut pot_validators);
-			log!(info, "🫣🫣🫣 Elected! -> Validators {:?}", validators.clone());
+			log!(debug, "🫣🫣🫣 Elected! -> Validators {:?}", validators.clone());
 		}
 		assert!(
 			validators.len() <= total_num_validators as usize,
@@ -200,7 +200,7 @@ impl<T: Config> Pallet<T> {
 			validators: validators.clone(),
 			pot_enabled,
 		});
-		log!(info, "🫣🫣🫣 electe validators -> Validators {:?}", validators.clone());
+		log!(debug, "🫣🫣🫣 electe validators -> Validators {:?}", validators.clone());
 		validators
 	}
 
@@ -211,8 +211,8 @@ impl<T: Config> Pallet<T> {
 			.take(num_seed_trust as usize)
 			.cloned()
 			.collect::<Vec<_>>();
-		log!(info, "🫣🫣🫣 Seed Trust -> Validators {:?}", res.clone());
-		Self::deposit_event(Event::<T>::SeedTrustValidatorsElected { validators: seed_trust_validators.clone(), num: res.len() as u32 });
+		log!(debug, "🫣🫣🫣 Seed Trust -> Validators {:?}", res.clone());
+		Self::deposit_event(Event::<T>::SeedTrustValidatorsElected { validators: res.clone(), num: res.len() as u32 });
 		res
 	}
 
@@ -226,14 +226,14 @@ impl<T: Config> Pallet<T> {
 		let res: Vec<T::AccountId> = pot_validators
 			.try_into()
 			.expect("Should be less than total number of validators");
-		log!(info, "🫣🫣🫣 Pot -> Validators {:?}", res.clone());
+		log!(debug, "🫣🫣🫣 Pot -> Validators {:?}", res.clone());
 		Self::deposit_event(Event::<T>::PotValidatorsElected { validators: res.clone(), num: pot_num as u32 });
 		res
 	}
 
 	/// Helper to set a new `ForceEra` mode.
 	pub fn set_force_era(mode: Forcing) {
-		log!(info, "Setting force era mode {:?}.", mode);
+		log!(debug, "Setting force era mode {:?}.", mode);
 		ForceEra::<T>::put(mode);
 		Self::deposit_event(Event::<T>::ForceEra { mode });
 	}
