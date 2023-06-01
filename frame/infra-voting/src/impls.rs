@@ -84,18 +84,18 @@ impl<T: Config> VotingHandler<T> for () {
 // - Internally `end_era()` is called when ending an era
 impl<T: Config> pallet_session::SessionManager<T::AccountId> for Pallet<T> {
 	fn new_session(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
-		log!(trace, "planning new session {}", new_index);
+		log!(info, "⏰ planning new session {}", new_index);
 		Self::handle_new_session(new_index, false)
 	}
 	fn new_session_genesis(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
-		log!(trace, "planning new session {} at genesis", new_index);
+		log!(info, "⏰ planning new session {} at genesis", new_index);
 		Self::handle_new_session(new_index, true)
 	}
 	fn start_session(start_index: SessionIndex) {
-		log!(trace, "starting session {}", start_index);
+		log!(info, "⏰ starting session {}", start_index);
 	}
 	fn end_session(end_index: SessionIndex) {
-		log!(trace, "ending session {}", end_index);
+		log!(info, "⏰ ending session {}", end_index);
 		T::RewardInterface::distribute_reward(end_index);
 	}
 }
@@ -129,6 +129,7 @@ impl<T: Config> Pallet<T> {
 
 			// New era.
 			let maybe_new_era_validators = Self::do_trigger_new_era(session_index, is_genesis);
+			log!(info, "🫣🫣🫣 Handle new session -> Validators {:?}", maybe_new_era_validators.clone());
 			if maybe_new_era_validators.is_some() &&
 				matches!(ForceEra::<T>::get(), Forcing::ForceNew)
 			{
@@ -194,6 +195,7 @@ impl<T: Config> Pallet<T> {
 			validators: validators.clone(),
 			pot_enabled,
 		});
+		log!(info, "🫣🫣🫣 electe validators -> Validators {:?}", validators.clone());
 		validators
 	}
 
