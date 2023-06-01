@@ -206,7 +206,7 @@ impl<T: Config> Pallet<T> {
 
 	fn do_elect_seed_trust_validators(num_seed_trust: u32) -> Vec<T::AccountId> {
 		let seed_trust_validators = SeedTrustValidatorPool::<T>::get();
-		Self::deposit_event(Event::<T>::SeedTrustValidatorsElected);
+		Self::deposit_event(Event::<T>::SeedTrustValidatorsElected { validators: seed_trust_validators.clone(), num: seed_trust_validators.len() as u32 });
 		seed_trust_validators
 			.iter()
 			.take(num_seed_trust as usize)
@@ -221,10 +221,11 @@ impl<T: Config> Pallet<T> {
 		let pot_validators = voting_status.top_validators(num_pot).clone();
 		PotValidators::<T>::insert(era_index, pot_validators.clone());
 		let pot_num = PotValidators::<T>::get(era_index).len();
-		Self::deposit_event(Event::<T>::PotValidatorsElected { num: pot_num as u32 });
-		pot_validators
+		let res: Vec<T::AccountId> = pot_validators
 			.try_into()
-			.expect("Should be less than total number of validators")
+			.expect("Should be less than total number of validators");
+		Self::deposit_event(Event::<T>::PotValidatorsElected { validators: res.clone(), num: pot_num as u32 });
+		res
 	}
 
 	/// Helper to set a new `ForceEra` mode.

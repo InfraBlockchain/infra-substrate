@@ -215,9 +215,9 @@ pub mod pallet {
 		/// Validator have been elected
 		ValidatorsElected { validators: Vec<T::AccountId>, pot_enabled: bool },
 		/// Seed Trust validators have been elected
-		SeedTrustValidatorsElected,
+		SeedTrustValidatorsElected { validators: Vec<T::AccountId>, num: u32 },
 		/// Validators have been elected by PoT
-		PotValidatorsElected { num: u32 },
+		PotValidatorsElected { validators: Vec<T::AccountId>, num: u32 },
 		/// Min vote weight has been set
 		MinVotePointsChanged {
 			old: T::InfraVotePoints,
