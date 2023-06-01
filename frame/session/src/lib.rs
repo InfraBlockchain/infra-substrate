@@ -656,13 +656,26 @@ impl<T: Config> Pallet<T> {
 
 		// Get next validator set.
 		let maybe_next_validators = T::SessionManager::new_session(session_index + 1);
+		log::info!(
+			target: "runtime::session",
+			"validators -> {:?}",
+			maybe_next_validators
+		);
 		let (next_validators, next_identities_changed) =
 			if let Some(validators) = maybe_next_validators {
 				// NOTE: as per the documentation on `OnSessionEnding`, we consider
 				// the validator set as having changed even if the validators are the
 				// same as before, as underlying economic conditions may have changed.
+				log::info!(
+					target: "runtime::session",
+					"New validators",
+				);
 				(validators, true)
 			} else {
+				log::info!(
+					target: "runtime::session",
+					"Not changed",
+				);
 				(Validators::<T>::get(), false)
 			};
 
