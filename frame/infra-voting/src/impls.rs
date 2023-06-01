@@ -1,5 +1,18 @@
 use crate::*;
 
+/// Something that handles fee reward
+pub trait RewardInterface {
+	/// Fee will be aggregated on certain account for current session
+	fn aggregate_reward(session_index: SessionIndex, asset_id: VoteAssetId, amount: VoteWeight);
+	/// Fee will be distributed to the validators for current session
+	fn distribute_reward(session_index: SessionIndex);
+}
+
+impl RewardInterface for () {
+	fn aggregate_reward(_session_index: SessionIndex, _asset_id: VoteAssetId, _amount: VoteWeight) {}
+	fn distribute_reward(_session_index: SessionIndex) {}
+}
+
 /// Means for interacting with a specialized version of the `session` trait.
 pub trait SessionInterface<AccountId> {
 	/// Disable the validator at the given index, returns `false` if the validator was already
@@ -83,6 +96,7 @@ impl<T: Config> pallet_session::SessionManager<T::AccountId> for Pallet<T> {
 	}
 	fn end_session(end_index: SessionIndex) {
 		log!(trace, "ending session {}", end_index);
+		T::RewardInterface::distribute_reward(end_index);
 	}
 }
 

@@ -8,7 +8,7 @@ use frame_support::traits::{EstimateNextNewSession, Get};
 pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_runtime::{
-	generic::{VoteAccountId, VoteWeight},
+	generic::{VoteAccountId, VoteAssetId, VoteWeight},
 	traits::MaybeDisplay,
 	RuntimeDebug, Saturating,
 };
@@ -155,6 +155,9 @@ pub mod pallet {
 
 		/// Interface for interacting with a session pallet.
 		type SessionInterface: SessionInterface<Self::AccountId>;
+
+		/// Interface for fee reward 
+		type RewardInterface: RewardInterface;
 	}
 
 	#[pallet::genesis_config]
@@ -184,12 +187,10 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
+			assert!(self.total_number_of_validators <= self.number_of_seed_trust_validators);
 			SeedTrustValidatorPool::<T>::put(self.seed_trust_validators.clone());
 			TotalNumberOfValidators::<T>::put(self.total_number_of_validators.clone());
 			NumberOfSeedTrustValidators::<T>::put(self.number_of_seed_trust_validators.clone());
-			log!(info, "Total Num Vals {:?}.", self.total_number_of_validators);
-			log!(info, "Num seed {:?}.", self.number_of_seed_trust_validators);
-			log!(info, "Seed Trust {:?}.", self.seed_trust_validators);
 			ForceEra::<T>::put(self.force_era);
 			if self.is_pot_enable_at_genesis {
 				assert!(self.vote_status_at_genesis.len() > 0, "Vote status should not be empty");
@@ -199,7 +200,6 @@ pub mod pallet {
 				});
 				PotValidatorPool::<T>::put(vote_status);
 			}
-			assert!(NumberOfSeedTrustValidators::<T>::get() <= TotalNumberOfValidators::<T>::get());
 		}
 	}
 
@@ -218,6 +218,11 @@ pub mod pallet {
 		SeedTrustValidatorsElected,
 		/// Validators have been elected by PoT
 		PotValidatorsElected { num: u32 },
+		/// Min vote weight has been set
+		MinVotePointsChanged {
+			old: T::InfraVotePoints,
+			new: T::InfraVotePoints,
+		},
 		/// A new force era mode was set.
 		ForceEra { mode: Forcing },
 	}
@@ -261,7 +266,7 @@ pub mod pallet {
 	pub type TotalNumberOfValidators<T: Config> = StorageValue<_, u32, ValueQuery>;
 
 	#[pallet::storage]
-	pub type MinVotePointsThreshold<T: Config> = StorageValue<_, VoteWeight, ValueQuery>;
+	pub type MinVotePointsThreshold<T: Config> = StorageValue<_, T::InfraVotePoints, ValueQuery>;
 
 	/// Start Session index for era
 	#[pallet::storage]
@@ -316,6 +321,24 @@ pub mod pallet {
 			seed_trust_validators.push(who.clone());
 			SeedTrustValidatorPool::<T>::put(seed_trust_validators);
 			Self::deposit_event(Event::<T>::SeedTrustAdded { who });
+			Ok(())
+		}
+
+		#[pallet::call_index(3)]
+		#[pallet::weight(0)]
+		pub fn set_min_vote_weight_threshold(origin: OriginFor<T>, new: T::InfraVotePoints) -> DispatchResult {
+
+			// Only root can call
+			ensure_root(origin)?;
+			let old = MinVotePointsThreshold::<T>::get();
+			MinVotePointsThreshold::<T>::put(new);
+			Self::deposit_event(
+				Event::<T>::MinVotePointsChanged {
+					old,
+					new
+				}
+			);
+
 			Ok(())
 		}
 	}

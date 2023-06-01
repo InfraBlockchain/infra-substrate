@@ -75,6 +75,7 @@ impl pallet_infra_voting::Config for TestRuntime {
 	type InfraVotePoints = VoteWeight;
 	type NextNewSession = Session;
 	type SessionInterface = ();
+	type RewardInterface = ();
 }
 
 parameter_types! {
