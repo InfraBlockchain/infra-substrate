@@ -32,19 +32,26 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 // use frame_support::traits::{Currency, OnUnbalanced, ReservableCurrency};
 pub use pallet::*;
-use sp_runtime::generic::{VoteAssetId, VoteWeight};
+use sp_runtime::{
+	generic::{VoteAssetId, VoteWeight},
+	traits::ConstU16,
+	BoundedVec,
+};
 
-pub type ParachainAssetId = VoteAssetId;
-pub type RelayChainAssetId = VoteAssetId;
-pub type ParachainId = u32;
+pub type ParaAssetId = VoteAssetId;
+pub type RelayAssetId = VoteAssetId;
+pub type ParaId = u32;
+pub type ExchangeRate = u32;
 
 /// System tokens API.
 pub trait SystemTokenInterface {
+	fn is_system_token(relay_asset_id: RelayAssetId) -> bool;
+	fn get_exchange_rate(relay_asset_id: RelayAssetId) -> Option<ExchangeRate>;
 	fn convert_to_relay_system_token(
-		para_id: ParachainId,
-		asset_id: ParachainAssetId,
-	) -> Option<RelayChainAssetId>;
-	fn adjusted_weight(asset_id: RelayChainAssetId, vote_weight: VoteWeight) -> VoteWeight;
+		para_id: ParaId,
+		asset_id: ParaAssetId,
+	) -> Option<RelayAssetId>;
+	fn adjusted_weight(asset_id: RelayAssetId, vote_weight: VoteWeight) -> VoteWeight;
 }
 
 #[frame_support::pallet]
@@ -57,6 +64,7 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		/// The overarching event type.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+		type MaxParachainLength: Get<u32>;
 	}
 
 	#[pallet::event]
@@ -64,15 +72,19 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// An asset was on the relay chain.
 		AssetRegistered {
-			para_id: ParachainId,
-			para_asset_id: ParachainAssetId,
-			relay_asset_id: RelayChainAssetId,
+			relay_asset_id: RelayAssetId,
+			parachains_asset_list: Vec<(ParaId, ParaAssetId)>,
+			exchange_rate: ExchangeRate,
+		},
+
+		AssetRemoved {
+			relay_asset_id: RelayAssetId,
 		},
 
 		AssetConverted {
-			para_id: ParachainId,
-			para_asset_id: ParachainAssetId,
-			relay_asset_id: RelayChainAssetId,
+			para_id: ParaId,
+			para_asset_id: ParaAssetId,
+			relay_asset_id: RelayAssetId,
 		},
 
 		WeightAdjusted {
@@ -85,12 +97,13 @@ pub mod pallet {
 	pub enum Error<T> {
 		AssetAlreadyRegistered,
 		AssetNotRegistered,
+		FailedToTryBoundedVec,
 	}
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		/// Genesis asset_links: para_id, para_asset_id, relay_asset_id
-		pub asset_links: Vec<(ParachainId, ParachainAssetId, RelayChainAssetId)>,
+		pub asset_links: Vec<(ParaId, ParaAssetId, RelayAssetId)>,
 		pub _phantom: PhantomData<T>,
 	}
 
@@ -105,57 +118,171 @@ pub mod pallet {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			for (para_id, para_asset_id, relay_asset_id) in &self.asset_links {
-				SystemTokenTable::<T>::insert(para_id, para_asset_id, relay_asset_id);
+				ParaAssetLink::<T>::insert(para_id, para_asset_id, relay_asset_id);
 			}
 		}
 	}
-
-	// Error for the token manager pallet.
-	// #[pallet::error]
-	// pub enum Error<T> {
-	// 	/// A name is too short.
-	// 	AssetRegistered,
-	// }
-
-	/// The lookup table for .
-	#[pallet::storage]
-	#[pallet::getter(fn system_token_table)]
-	pub(super) type SystemTokenTable<T: Config> = StorageDoubleMap<
-		_,
-		Twox64Concat,
-		ParachainId,
-		Twox64Concat,
-		ParachainAssetId,
-		RelayChainAssetId,
-		OptionQuery,
-	>;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
 
+	/// In the context of Relay chain, asset link table for storing asset links between relay and
+	/// para.
+	#[pallet::storage]
+	#[pallet::getter(fn para_asset_link)]
+	pub(super) type ParaAssetLink<T: Config> = StorageDoubleMap<
+		_,
+		Twox64Concat,
+		ParaId,
+		Twox64Concat,
+		ParaAssetId,
+		RelayAssetId,
+		OptionQuery,
+	>;
+
+	/// In the context of Parachain, asset link table for storing asset links between relay and
+	/// para.
+	#[pallet::storage]
+	#[pallet::getter(fn relay_asset_link)]
+	pub(super) type RelayAssetLink<T: Config> = StorageMap<
+		_,
+		Twox64Concat,
+		RelayAssetId,
+		BoundedVec<(ParaId, ParaAssetId), T::MaxParachainLength>,
+		OptionQuery,
+	>;
+
+	/// Exchagne rate table for valuating each token in the relay chain.
+	#[pallet::storage]
+	#[pallet::getter(fn exchange_rate_table)]
+	pub(super) type ExchangeRateTable<T: Config> =
+		StorageMap<_, Twox64Concat, RelayAssetId, ExchangeRate, OptionQuery>;
+
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// Set an account's name
+		/// Register a system token
 		#[pallet::call_index(0)]
 		#[pallet::weight(1_000)]
 		pub fn register_asset(
 			origin: OriginFor<T>,
-			para_id: ParachainId,
-			para_asset_id: ParachainAssetId,
-			relay_asset_id: RelayChainAssetId,
+			parachains_asset_list: Vec<(ParaId, ParaAssetId)>,
+			relay_asset_id: RelayAssetId,
+			exchange_rate: ExchangeRate,
 		) -> DispatchResult {
 			ensure_root(origin)?;
-			ensure!(
-				!SystemTokenTable::<T>::contains_key(para_id, para_asset_id),
-				Error::<T>::AssetAlreadyRegistered
-			);
-			SystemTokenTable::<T>::insert(para_id, para_asset_id, relay_asset_id);
+
+			// check an asset can be newly registered
+			{
+				for (para_id, para_asset_id) in &parachains_asset_list {
+					ensure!(
+						!ParaAssetLink::<T>::contains_key(para_id, para_asset_id),
+						Error::<T>::AssetAlreadyRegistered
+					);
+				}
+				ensure!(
+					!RelayAssetLink::<T>::contains_key(relay_asset_id),
+					Error::<T>::AssetAlreadyRegistered
+				);
+				ensure!(
+					!ExchangeRateTable::<T>::contains_key(exchange_rate),
+					Error::<T>::AssetAlreadyRegistered
+				);
+			}
+
+			// register the asset link and exchange rate
+			{
+				for (para_id, para_asset_id) in &parachains_asset_list {
+					ParaAssetLink::<T>::insert(para_id, para_asset_id, relay_asset_id);
+				}
+				if let Ok(bounded) =
+					BoundedVec::<(ParaId, ParaAssetId), T::MaxParachainLength>::try_from(
+						parachains_asset_list.clone(),
+					) {
+					RelayAssetLink::<T>::insert(relay_asset_id, bounded);
+				} else {
+					return Err(Error::<T>::FailedToTryBoundedVec.into())
+				};
+
+				ExchangeRateTable::<T>::insert(relay_asset_id, exchange_rate);
+			}
+
 			Self::deposit_event(Event::<T>::AssetRegistered {
-				para_id,
-				para_asset_id,
 				relay_asset_id,
+				parachains_asset_list,
+				exchange_rate,
 			});
+
+			Ok(())
+		}
+
+		/// Remove a system token
+		#[pallet::call_index(1)]
+		#[pallet::weight(1_000)]
+		pub fn remove_asset(origin: OriginFor<T>, relay_asset_id: RelayAssetId) -> DispatchResult {
+			ensure_root(origin)?;
+
+			// ensure some logic
+
+			if let Some(parachains_asset_list) = RelayAssetLink::<T>::get(relay_asset_id) {
+				for (p1, p2) in parachains_asset_list {
+					ParaAssetLink::<T>::remove(p1, p2)
+				}
+				RelayAssetLink::<T>::remove(relay_asset_id);
+			// Ok(())
+			} else {
+				return Err(Error::<T>::AssetNotRegistered.into())
+			};
+
+			// Self::deposit_event(Event::<T>::AssetRegistered {
+			// 	para_id,
+			// 	para_asset_id,
+			// 	relay_asset_id,
+			// });
+
+			Self::deposit_event(Event::<T>::AssetRemoved { relay_asset_id });
+
+			Ok(())
+		}
+
+		/// Update an asset link when new parachain has been connected
+		#[pallet::call_index(2)]
+		#[pallet::weight(1_000)]
+		pub fn update_asset_link(
+			origin: OriginFor<T>,
+			para_id: ParaId,
+			para_asset_id: ParaAssetId,
+			relay_asset_id: RelayAssetId,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			Ok(())
+		}
+
+		/// Remove asset_link when a specific parachain has been disconnected
+		#[pallet::call_index(3)]
+		#[pallet::weight(1_000)]
+		pub fn remove_asset_link(
+			origin: OriginFor<T>,
+			para_id: ParaId,
+			para_asset_id: ParaAssetId,
+			relay_asset_id: RelayAssetId,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			Ok(())
+		}
+
+		/// Update the exchange rate for system token
+		#[pallet::call_index(4)]
+		#[pallet::weight(1_000)]
+		pub fn update_exchange_rate(
+			origin: OriginFor<T>,
+			relay_asset_id: RelayAssetId,
+			exchange_rate: ExchangeRate,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+
 			Ok(())
 		}
 	}
@@ -171,11 +298,23 @@ impl<T: Config> Pallet<T> {
 
 // I think it would be great to return Result<()> type
 impl<T: Config> SystemTokenInterface for Pallet<T> {
+	fn is_system_token(relay_asset_id: RelayAssetId) -> bool {
+		if let Some(_) = <ExchangeRateTable<T>>::get(relay_asset_id) {
+			return true
+		}
+		return false
+	}
+	fn get_exchange_rate(relay_asset_id: RelayAssetId) -> Option<ExchangeRate> {
+		if let Some(exchange_rate) = <ExchangeRateTable<T>>::get(relay_asset_id) {
+			return Some(exchange_rate)
+		}
+		return None
+	}
 	fn convert_to_relay_system_token(
-		para_id: ParachainId,
-		para_asset_id: ParachainAssetId,
-	) -> Option<RelayChainAssetId> {
-		if let Some(relay_asset_id) = <SystemTokenTable<T>>::get(para_id, para_asset_id) {
+		para_id: ParaId,
+		para_asset_id: ParaAssetId,
+	) -> Option<RelayAssetId> {
+		if let Some(relay_asset_id) = <ParaAssetLink<T>>::get(para_id, para_asset_id) {
 			Self::deposit_event(Event::<T>::AssetConverted {
 				para_id,
 				para_asset_id,
@@ -186,7 +325,7 @@ impl<T: Config> SystemTokenInterface for Pallet<T> {
 		None
 	}
 
-	fn adjusted_weight(_asset_id: RelayChainAssetId, vote_weight: VoteWeight) -> VoteWeight {
+	fn adjusted_weight(_asset_id: RelayAssetId, vote_weight: VoteWeight) -> VoteWeight {
 		let adjusted_weight = Self::do_adjust_weight(vote_weight);
 		Self::deposit_event(Event::<T>::WeightAdjusted {
 			old_weight: vote_weight,
