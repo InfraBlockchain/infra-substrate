@@ -478,7 +478,11 @@ pub mod pallet {
 				!initial_validators_1.is_empty(),
 				"Empty validator set for session 1 in genesis block!"
 			);
-
+			log::info!(
+				target: "runtime::session-build",
+				"New validators{:?}",
+				initial_validators_1.clone(),
+			);
 			let queued_keys: Vec<_> = initial_validators_1
 				.iter()
 				.cloned()
