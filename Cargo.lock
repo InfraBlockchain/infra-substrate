@@ -5051,7 +5051,7 @@ dependencies = [
  "node-template-runtime",
  "pallet-assets",
  "pallet-infra-asset-tx-payment",
- "pallet-infra-system-token-manager",
+ "pallet-system-token-manager",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc",
  "sc-basic-authorship",
@@ -5102,9 +5102,9 @@ dependencies = [
  "pallet-balances",
  "pallet-grandpa",
  "pallet-infra-asset-tx-payment",
- "pallet-infra-system-token-manager",
  "pallet-insecure-randomness-collective-flip",
  "pallet-sudo",
+ "pallet-system-token-manager",
  "pallet-template",
  "pallet-timestamp",
  "pallet-transaction-payment",
@@ -6045,21 +6045,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-infra-system-token-manager"
-version = "4.0.0-dev"
-dependencies = [
- "frame-support",
- "frame-system",
- "pallet-balances",
- "parity-scale-codec",
- "scale-info",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "pallet-infra-voting"
 version = "0.1.0"
 dependencies = [
@@ -6739,6 +6724,21 @@ version = "4.0.0-dev"
 dependencies = [
  "frame-support",
  "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-system-token-manager"
+version = "4.0.0-dev"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
  "parity-scale-codec",
  "scale-info",
  "sp-core",

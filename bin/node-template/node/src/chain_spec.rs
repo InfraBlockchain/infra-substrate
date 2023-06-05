@@ -147,17 +147,24 @@ fn testnet_genesis(
 		grandpa: GrandpaConfig {
 			authorities: initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect(),
 		},
-		token_manager: pallet_infra_system_token_manager::GenesisConfig {
+		system_token_manager: pallet_system_token_manager::GenesisConfig {
 			// asset_links: vec![(para_id, para_asset_id, relay_asset_id) ... ]
 			asset_links: vec![(1000, 99, 99)],
 			..Default::default()
 		},
 		assets: pallet_assets::GenesisConfig {
-			assets: vec![(1, get_account_id_from_seed::<sr25519::Public>("Alice"), true, 1)],
-			accounts: vec![
-				(1, get_account_id_from_seed::<sr25519::Public>("Alice"), 1 << 30),
-				(1, get_account_id_from_seed::<sr25519::Public>("Bob"), 1 << 30),
-			],
+			assets: vec![(
+				99,                                                   // asset_id
+				get_account_id_from_seed::<sr25519::Public>("Alice"), // owner
+				true,                                                 // is_sufficient
+				1000,                                                 // min_balance
+			)],
+			metadata: vec![(99, "iTEST".into(), "iTEST".into(), 12)],
+			accounts: vec![(
+				99,
+				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				1_000_000_000_000_000_000_000, // 1_000_000_000 iTEST
+			)],
 			..Default::default()
 		},
 		sudo: SudoConfig {

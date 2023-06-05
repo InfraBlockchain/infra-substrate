@@ -75,7 +75,7 @@ use sp_runtime::{
 		CheckEqual, Dispatchable, Hash, Lookup, LookupError, MaybeDisplay,
 		MaybeSerializeDeserialize, Member, One, Saturating, SimpleBitOps, StaticLookup, Zero,
 	},
-	DispatchError, RuntimeDebug,
+	BoundedVec, DispatchError, RuntimeDebug,
 };
 
 #[cfg(any(feature = "std", test))]
@@ -697,6 +697,54 @@ pub enum Phase {
 impl Default for Phase {
 	fn default() -> Self {
 		Self::Initialization
+	}
+}
+
+/// Data structure for Original system tokens
+#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, TypeInfo, MaxEncodedLen)]
+pub struct SystemTokenId {
+	/// ParaId where to use the system token. Especially, we assigned the relaychain as ParaID = 0
+	pub para_id: u32,
+	/// PalletId on the parachain where to use the system token
+	pub pallet_id: u32,
+	/// AssetId on the parachain where to use the system token
+	pub asset_id: u32,
+}
+
+/// Data structure for Wrapped system tokens
+pub type WrappedSystemTokenId = SystemTokenId;
+// #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, TypeInfo, MaxEncodedLen)]
+// pub struct WrappedSystemTokenId {
+// 	/// ParaId where to use the system token. Especially, we assigned the relaychain as ParaID = 0
+// 	pub para_id: u32,
+// 	/// PalletId on the parachain where to use the system token
+// 	pub pallet_id: u32,
+// 	/// AssetId on the parachain where to use the system token
+// 	pub asset_id: u32,
+// }
+
+type StringLimit = ConstU32<32>;
+#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, TypeInfo, MaxEncodedLen)]
+pub struct SystemTokenMetadata {
+	/// `is_sufficient = true` should be used as a system token.
+	pub is_sufficient: bool,
+	/// The minimum balance of this new asset that any single account must have.
+	pub min_balance: u32,
+	/// The number of decimals this asset uses to represent one unit.
+	pub decimal: u64,
+	/// The total supply for the system token.
+	pub total_supply: u64,
+	/// The user friendly name of this asset.
+	pub name: BoundedVec<u8, StringLimit>,
+	/// The exchange symbol for this asset.
+	pub symbol: BoundedVec<u8, StringLimit>,
+	/// The exchange rate
+	pub exchange_rate: u32,
+}
+
+impl SystemTokenMetadata {
+	pub fn get_exchange_rate(&self) -> u32 {
+		self.exchange_rate
 	}
 }
 
