@@ -30,7 +30,7 @@ frame-system = { version = "4.0.0-dev", default-features = false, path = "../../
 frame-try-runtime = { version = "0.10.0-dev", default-features = false, path = "../../../frame/try-runtime", optional = true }
 pallet-timestamp = { version = "4.0.0-dev", default-features = false, path = "../../../frame/timestamp" }
 pallet-transaction-payment = { version = "4.0.0-dev", default-features = false, path = "../../../frame/transaction-payment" }
-pallet-infra-asset-tx-payment = { version = "0.1.0", default-features = false, path = "../../../frame/transaction-payment/infra-asset-tx-payment/" }
+pallet-fee-payment-manager = { version = "0.1.0", default-features = false, path = "../../../frame/transaction-payment/fee-payment-manager/" }
 pallet-authorship = { version = "4.0.0-dev", default-features = false, path = "../../../frame/authorship" }
 frame-executive = { version = "4.0.0-dev", default-features = false, path = "../../../frame/executive" }
 sp-api = { version = "4.0.0-dev", default-features = false, path = "../../../primitives/api" }
@@ -84,7 +84,7 @@ std = [
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
-	"pallet-infra-asset-tx-payment/std",
+	"pallet-fee-payment-manager/std",
 	"sp-api/std",
 	"sp-block-builder/std",
 	"sp-consensus-aura/std",

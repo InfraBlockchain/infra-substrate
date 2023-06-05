@@ -472,32 +472,18 @@ pub mod pallet {
 				"Empty validator set for session 0 in genesis block!"
 			);
 
-			log::info!(
-				target: "runtime::session-build",
-				"Initial Validator 0 => {:?}",
-				initial_validators_0.clone(),
-			);
-
 			let initial_validators_1 = T::SessionManager::new_session_genesis(1)
 				.unwrap_or_else(|| initial_validators_0.clone());
+
 			assert!(
 				!initial_validators_1.is_empty(),
 				"Empty validator set for session 1 in genesis block!"
 			);
-			log::info!(
-				target: "runtime::session-build",
-				"Initial Validator 1 => {:?}",
-				initial_validators_1.clone(),
-			);
+
 			let queued_keys: Vec<_> = initial_validators_1
 				.iter()
 				.cloned()
 				.map(|v| {
-					log::info!(
-						target: "runtime::session-build",
-						"ValidtorId => {:?}",
-						v.clone(),
-					);
 					(
 						v.clone(),
 						Pallet::<T>::load_keys(&v).expect("Validator in session 1 missing keys!"),
@@ -681,16 +667,8 @@ impl<T: Config> Pallet<T> {
 				// NOTE: as per the documentation on `OnSessionEnding`, we consider
 				// the validator set as having changed even if the validators are the
 				// same as before, as underlying economic conditions may have changed.
-				log::info!(
-					target: "runtime::session",
-					"New validators",
-				);
 				(validators, true)
 			} else {
-				log::info!(
-					target: "runtime::session",
-					"Not changed",
-				);
 				(Validators::<T>::get(), false)
 			};
 
