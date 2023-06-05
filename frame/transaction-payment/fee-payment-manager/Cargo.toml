@@ -1,5 +1,5 @@
 [package]
-name = "pallet-infra-asset-tx-payment"
+name = "pallet-fee-payment-manager"
 version = "0.1.0"
 edition = "2021"
 
