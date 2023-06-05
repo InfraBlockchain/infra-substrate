@@ -131,6 +131,12 @@ pub mod pallet {
 		StorageMap<_, Twox64Concat, SystemTokenId, SystemTokenMetadata, OptionQuery>;
 
 	#[pallet::storage]
+	#[pallet::getter(fn system_token_on_parachain)]
+	/// Convert table from local system token to original system token.
+	pub(super) type SystemTokenOnParachain<T: Config> =
+		StorageMap<_, Twox64Concat, WrappedSystemTokenId, SystemTokenId, OptionQuery>;
+
+	#[pallet::storage]
 	#[pallet::getter(fn system_token_on_parachain_by_para_id)]
 	/// System token list for specific parachain by ParaId .
 	pub(super) type SystemTokenOnParachainByParaId<T: Config> = StorageMap<
@@ -140,12 +146,6 @@ pub mod pallet {
 		BoundedVec<WrappedSystemTokenId, T::MaxWrappedSystemToken>,
 		OptionQuery,
 	>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn system_token_on_parachain)]
-	/// Convert table from local system token to original system token.
-	pub(super) type SystemTokenConvertTable<T: Config> =
-		StorageMap<_, Twox64Concat, WrappedSystemTokenId, SystemTokenId, OptionQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -217,7 +217,7 @@ impl<T: Config> SystemTokenInterface for Pallet<T> {
 	fn convert_to_original_system_token(
 		wrapped_system_token: WrappedSystemTokenId,
 	) -> Option<SystemTokenId> {
-		if let Some(s) = <SystemTokenConvertTable<T>>::get(&wrapped_system_token) {
+		if let Some(s) = <SystemTokenOnParachain<T>>::get(&wrapped_system_token) {
 			Self::deposit_event(Event::<T>::AssetConverted {
 				wrapped_system_token,
 				system_token_id: s.clone(),
