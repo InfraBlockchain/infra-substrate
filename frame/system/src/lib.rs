@@ -713,15 +713,6 @@ pub struct SystemTokenId {
 
 /// Data structure for Wrapped system tokens
 pub type WrappedSystemTokenId = SystemTokenId;
-// #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, TypeInfo, MaxEncodedLen)]
-// pub struct WrappedSystemTokenId {
-// 	/// ParaId where to use the system token. Especially, we assigned the relaychain as ParaID = 0
-// 	pub para_id: u32,
-// 	/// PalletId on the parachain where to use the system token
-// 	pub pallet_id: u32,
-// 	/// AssetId on the parachain where to use the system token
-// 	pub asset_id: u32,
-// }
 
 type StringLimit = ConstU32<32>;
 #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, TypeInfo, MaxEncodedLen)]
