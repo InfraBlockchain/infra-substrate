@@ -147,11 +147,6 @@ fn testnet_genesis(
 		grandpa: GrandpaConfig {
 			authorities: initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect(),
 		},
-		system_token_manager: pallet_system_token_manager::GenesisConfig {
-			// asset_links: vec![(para_id, para_asset_id, relay_asset_id) ... ]
-			asset_links: vec![(1000, 99, 99)],
-			..Default::default()
-		},
 		assets: pallet_assets::GenesisConfig {
 			assets: vec![(
 				99,                                                   // asset_id

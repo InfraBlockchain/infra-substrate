@@ -38,6 +38,7 @@ use sp_runtime::generic::{VoteAssetId, VoteWeight};
 pub type ParaAssetId = VoteAssetId;
 pub type RelayAssetId = VoteAssetId;
 pub type ParaId = u32;
+pub type PalletId = u32;
 pub type ExchangeRate = u32;
 
 /// System tokens API.
@@ -96,30 +97,6 @@ pub mod pallet {
 		AssetAlreadyRegistered,
 		AssetNotRegistered,
 	}
-
-	#[pallet::genesis_config]
-	pub struct GenesisConfig<T: Config> {
-		/// Genesis asset_links: para_id, para_asset_id, relay_asset_id
-		pub asset_links: Vec<(ParaId, ParaAssetId, RelayAssetId)>,
-		pub _phantom: PhantomData<T>,
-	}
-
-	#[cfg(feature = "std")]
-	impl<T: Config> Default for GenesisConfig<T> {
-		fn default() -> Self {
-			Self { asset_links: Default::default(), _phantom: Default::default() }
-		}
-	}
-
-	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
-		fn build(&self) {
-			let system_token: SystemTokenId = Default::default();
-			let system_token_metadata: SystemTokenMetadata = Default::default();
-			SystemTokenList::<T>::insert(system_token, system_token_metadata);
-		}
-	}
-
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
@@ -132,18 +109,31 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn system_token_on_parachain)]
-	/// Convert table from local system token to original system token.
+	/// Coverter between WrappedSystemTokenId and original SystemTokenId.
 	pub(super) type SystemTokenOnParachain<T: Config> =
 		StorageMap<_, Twox64Concat, WrappedSystemTokenId, SystemTokenId, OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn system_token_on_parachain_by_para_id)]
-	/// System token list for specific parachain by ParaId .
+	/// System token list for specific parachain by ParaId.
 	pub(super) type SystemTokenOnParachainByParaId<T: Config> = StorageMap<
 		_,
 		Twox64Concat,
-		u32,
+		ParaId,
 		BoundedVec<WrappedSystemTokenId, T::MaxWrappedSystemToken>,
+		OptionQuery,
+	>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn allowed_system_token)]
+	/// Wrapped System token list used in parachains.
+	pub(super) type AllowedSystemToken<T: Config> = StorageDoubleMap<
+		_,
+		Twox64Concat,
+		ParaId,
+		Twox64Concat,
+		PalletId,
+		WrappedSystemTokenId,
 		OptionQuery,
 	>;
 
