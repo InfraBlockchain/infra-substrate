@@ -1,5 +1,5 @@
 use crate::{
-	codec::{Decode, Encode},
+	codec::{Decode, Encode, MaxEncodedLen},
 	scale_info::TypeInfo,
 };
 
@@ -20,20 +20,47 @@ pub type VoteAssetId = u32;
 pub const MAX_VOTE_NUM: u32 = 16 * 1024;
 pub type PotVotesResult = BoundedVec<PotVote, ConstU32<MAX_VOTE_NUM>>;
 
+/// Data structure for Original system tokens
+#[derive(Clone, Encode, Decode, Eq, PartialEq, PartialOrd, Ord, sp_core::RuntimeDebug, Default, TypeInfo, MaxEncodedLen)]
+#[cfg_attr(feature = "std", derive(Hash, Serialize, Deserialize))]
+pub struct SystemTokenId {
+	/// ParaId where to use the system token. Especially, we assigned the relaychain as ParaID = 0
+	pub para_id: u32,
+	/// PalletId on the parachain where to use the system token
+	pub pallet_id: u32,
+	/// AssetId on the parachain where to use the system token
+	pub asset_id: VoteAssetId,
+}
+
+impl From<SystemTokenId> for VoteAssetId {
+	fn from(value: SystemTokenId) -> Self {
+		value.asset_id
+	}
+}
+
+impl SystemTokenId {
+	pub fn new(para_id: u32, pallet_id: u32, asset_id: VoteAssetId) -> Self {
+		Self {
+			para_id,
+			pallet_id,
+			asset_id 
+		}
+	}
+}
+
 #[derive(Encode, Decode, Clone, PartialEq, Eq, sp_core::RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Default, Hash))]
 /// Single Pot vote type
 pub struct PotVote {
-	#[codec(compact)]
-	pub asset_id: VoteAssetId,
+	pub system_token_id: SystemTokenId,
 	pub account_id: VoteAccountId,
 	#[codec(compact)]
 	pub vote_weight: VoteWeight,
 }
 
 impl PotVote {
-	pub fn new(asset_id: VoteAssetId, account_id: VoteAccountId, vote_weight: VoteWeight) -> Self {
-		Self { asset_id, account_id, vote_weight }
+	pub fn new(system_token_id: SystemTokenId, account_id: VoteAccountId, vote_weight: VoteWeight) -> Self {
+		Self { system_token_id, account_id, vote_weight }
 	}
 }
 
@@ -44,7 +71,7 @@ impl PotVote {
 /// Vote is included in transaction and send to blockchain.
 /// It is collected for every block as a form of (Asset Id, Account Id, Vote Weight).
 pub struct PotVotes {
-	pub votes: BTreeMap<(VoteAssetId, VoteAccountId), VoteWeight>,
+	pub votes: BTreeMap<(SystemTokenId, VoteAccountId), VoteWeight>,
 	#[codec(compact)]
 	pub vote_count: u32,
 	#[codec(compact)]
@@ -53,9 +80,9 @@ pub struct PotVotes {
 
 /// An interface for dealing with vote info
 impl PotVotes {
-	pub fn new(asset_id: VoteAssetId, candidate: VoteAccountId, vote_weight: VoteWeight) -> Self {
+	pub fn new(system_token_id: SystemTokenId, candidate: VoteAccountId, vote_weight: VoteWeight) -> Self {
 		let mut votes = BTreeMap::new();
-		votes.insert((asset_id, candidate), vote_weight);
+		votes.insert((system_token_id, candidate), vote_weight);
 		Self { votes, vote_count: 1, max_vote_count: MAX_VOTE_NUM }
 	}
 
@@ -64,12 +91,12 @@ impl PotVotes {
 	/// If it is not exceeded, we update the votes. Otherwise, we do nothing.
 	pub fn update_vote_weight(
 		&mut self,
-		vote_asset_id: VoteAssetId,
+		system_token_id: SystemTokenId,
 		vote_account_id: VoteAccountId,
 		vote_weight: VoteWeight,
 	) {
 		let mut vote_weight = vote_weight;
-		let key = (vote_asset_id, vote_account_id);
+		let key = (system_token_id, vote_account_id);
 		// Weight for asset id already existed
 		if let Some(old_weight) = self.votes.get_mut(&key) {
 			// Weight for asset id already existed
@@ -106,19 +133,19 @@ mod tests {
 	use super::*;
 
 	fn new_pot_votes(
-		asset_id: VoteAssetId,
+		system_token_id: SystemTokenId,
 		candidate: VoteAccountId,
 		vote_weight: VoteWeight,
 	) -> PotVotes {
-		PotVotes::new(asset_id, candidate, vote_weight)
+		PotVotes::new(system_token_id, candidate, vote_weight)
 	}
 
 	#[test]
 	fn do_not_insert_value_if_exceeds_works() {
 		let candidate: VoteAccountId = AccountId32::new([0u8; 32]);
-		let asset_id: VoteAssetId = 0;
+		let system_token_id = SystemTokenId::new(2000, 50, 99);
 		let vote_weight: VoteWeight = 1;
-		let mut pot_votes = new_pot_votes(asset_id, candidate.clone(), vote_weight);
+		let mut pot_votes = new_pot_votes(system_token_id, candidate.clone(), vote_weight);
 		for i in 1..MAX_VOTE_NUM + 1 {
 			pot_votes.update_vote_weight(i, candidate.clone(), 1);
 		}
@@ -129,19 +156,19 @@ mod tests {
 	fn get_votes_works() {
 		let candidate: VoteAccountId = AccountId32::new([0u8; 32]);
 		let vote_weight: VoteWeight = 1;
-		let mut pot_votes = new_pot_votes(0, candidate.clone(), vote_weight);
-		pot_votes.update_vote_weight(1, candidate.clone(), vote_weight);
-		pot_votes.update_vote_weight(2, candidate.clone(), vote_weight);
-		pot_votes.update_vote_weight(3, candidate.clone(), vote_weight);
+		let mut pot_votes = new_pot_votes(SystemTokenId::new(2000, 50, 99), candidate.clone(), vote_weight);
+		pot_votes.update_vote_weight(SystemTokenId::new(2000, 50, 98), candidate.clone(), vote_weight);
+		pot_votes.update_vote_weight(SystemTokenId::new(2000, 50, 97), candidate.clone(), vote_weight);
+		pot_votes.update_vote_weight(SystemTokenId::new(2000, 50, 96), candidate.clone(), vote_weight);
 		sp_std::if_std! {
 			println!("Votes : {:?}", pot_votes.votes());
 		}
 		assert_eq!(pot_votes.vote_count, 4);
 		let expected: PotVotesResult = vec![
-			PotVote::new(0, candidate.clone(), vote_weight),
-			PotVote::new(1, candidate.clone(), vote_weight),
-			PotVote::new(2, candidate.clone(), vote_weight),
-			PotVote::new(3, candidate.clone(), vote_weight),
+			PotVote::new(SystemTokenId::new(2000, 50, 99), candidate.clone(), vote_weight),
+			PotVote::new(SystemTokenId::new(2000, 50, 98), candidate.clone(), vote_weight),
+			PotVote::new(SystemTokenId::new(2000, 50, 97), candidate.clone(), vote_weight),
+			PotVote::new(SystemTokenId::new(2000, 50, 96), candidate.clone(), vote_weight),
 		]
 		.try_into()
 		.expect("PotVotesResult should be bounded");

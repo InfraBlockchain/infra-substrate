@@ -1,13 +1,11 @@
-use super::tokens::{AssetId, Balance};
+
+use sp_runtime::generic::{VoteAccountId, VoteWeight, SystemTokenId};
 /// An interface for dealing with vote info
-pub trait VoteInfoHandler {
-	type VoteAccountId;
-	type VoteAssetId: AssetId;
-	type VoteWeight: Balance;
+pub trait VotingHandler {
 
 	fn update_pot_vote(
-		who: Self::VoteAccountId,
-		asset_id: Self::VoteAssetId,
-		vote_weight: Self::VoteWeight,
+		who: VoteAccountId,
+		system_token_id: SystemTokenId,
+		vote_weight: VoteWeight,
 	);
 }

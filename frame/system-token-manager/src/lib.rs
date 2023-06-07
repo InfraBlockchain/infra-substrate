@@ -35,9 +35,9 @@ use codec::{Decode, Encode, MaxEncodedLen};
 pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_runtime::{
-	generic::{VoteAssetId, VoteWeight},
+	generic::{VoteAssetId, VoteWeight, SystemTokenId},
 	traits::ConstU32,
-	BoundedVec, RuntimeDebug,
+	BoundedVec, RuntimeDebug, 
 };
 
 pub type ParaAssetId = VoteAssetId;
@@ -45,17 +45,6 @@ pub type RelayAssetId = VoteAssetId;
 pub type ParaId = u32;
 pub type PalletId = u32;
 pub type ExchangeRate = u32;
-
-/// Data structure for Original system tokens
-#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, TypeInfo, MaxEncodedLen)]
-pub struct SystemTokenId {
-	/// ParaId where to use the system token. Especially, we assigned the relaychain as ParaID = 0
-	pub para_id: u32,
-	/// PalletId on the parachain where to use the system token
-	pub pallet_id: u32,
-	/// AssetId on the parachain where to use the system token
-	pub asset_id: u32,
-}
 
 /// Data structure for Wrapped system tokens
 pub type WrappedSystemTokenId = SystemTokenId;
