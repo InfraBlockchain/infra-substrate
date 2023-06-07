@@ -3,13 +3,13 @@ use crate::*;
 /// Something that handles fee reward
 pub trait RewardInterface {
 	/// Fee will be aggregated on certain account for current session
-	fn aggregate_reward(session_index: SessionIndex, asset_id: VoteAssetId, amount: VoteWeight);
+	fn aggregate_reward(session_index: SessionIndex, system_token_id: SystemTokenId, amount: VoteWeight);
 	/// Fee will be distributed to the validators for current session
 	fn distribute_reward(session_index: SessionIndex);
 }
 
 impl RewardInterface for () {
-	fn aggregate_reward(_session_index: SessionIndex, _asset_id: VoteAssetId, _amount: VoteWeight) {}
+	fn aggregate_reward(_session_index: SessionIndex, _system_token_id: SystemTokenId, _amount: VoteWeight) {}
 	fn distribute_reward(_session_index: SessionIndex) {}
 }
 
