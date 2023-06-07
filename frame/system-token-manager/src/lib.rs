@@ -28,12 +28,17 @@
 //!
 //! * `set_name` - Set the associated name of an account; a small deposit is reserved if not already
 //!   taken.
+//! *
 
 #![cfg_attr(not(feature = "std"), no_std)]
-use frame_system::{SystemTokenId, WrappedSystemTokenId};
-// use frame_support::traits::{Currency, OnUnbalanced, ReservableCurrency};
+use codec::{Decode, Encode, MaxEncodedLen};
 pub use pallet::*;
-use sp_runtime::generic::{VoteAssetId, VoteWeight};
+use scale_info::TypeInfo;
+use sp_runtime::{
+	generic::{VoteAssetId, VoteWeight},
+	traits::ConstU32,
+	BoundedVec, RuntimeDebug,
+};
 
 pub type ParaAssetId = VoteAssetId;
 pub type RelayAssetId = VoteAssetId;
@@ -41,11 +46,50 @@ pub type ParaId = u32;
 pub type PalletId = u32;
 pub type ExchangeRate = u32;
 
+/// Data structure for Original system tokens
+#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, TypeInfo, MaxEncodedLen)]
+pub struct SystemTokenId {
+	/// ParaId where to use the system token. Especially, we assigned the relaychain as ParaID = 0
+	pub para_id: u32,
+	/// PalletId on the parachain where to use the system token
+	pub pallet_id: u32,
+	/// AssetId on the parachain where to use the system token
+	pub asset_id: u32,
+}
+
+/// Data structure for Wrapped system tokens
+pub type WrappedSystemTokenId = SystemTokenId;
+
+type StringLimit = ConstU32<32>;
+#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, TypeInfo, MaxEncodedLen)]
+pub struct SystemTokenMetadata {
+	/// `is_sufficient = true` should be used as a system token.
+	pub is_sufficient: bool,
+	/// The minimum balance of this new system token that any single account must have.
+	pub min_balance: u32,
+	/// The number of decimals this system token uses to represent one unit.
+	pub decimal: u64,
+	/// The total supply for the system token.
+	pub total_supply: u64,
+	/// The user friendly name of this system token.
+	pub name: BoundedVec<u8, StringLimit>,
+	/// The exchange symbol for this system token.
+	pub symbol: BoundedVec<u8, StringLimit>,
+	/// The exchange rate
+	pub exchange_rate: u32,
+}
+
+impl SystemTokenMetadata {
+	pub fn get_exchange_rate(&self) -> u32 {
+		self.exchange_rate
+	}
+}
+
 /// System tokens API.
 pub trait SystemTokenInterface {
 	/// Check the system token is registered.
 	fn is_system_token(system_token: SystemTokenId) -> bool;
-	/// Convert Para system token to Original system token.
+	/// Convert para system token to original system token.
 	fn convert_to_original_system_token(
 		wrapped_token: WrappedSystemTokenId,
 	) -> Option<SystemTokenId>;
@@ -57,9 +101,7 @@ pub trait SystemTokenInterface {
 pub mod pallet {
 	use super::*;
 	use frame_support::pallet_prelude::{OptionQuery, *};
-	use frame_system::{
-		pallet_prelude::*, SystemTokenId, SystemTokenMetadata, WrappedSystemTokenId,
-	};
+	use frame_system::pallet_prelude::*;
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// The overarching event type.
@@ -75,18 +117,18 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// An asset was on the relay chain.
-		AssetRegistered {
+		/// Register a new system token.
+		SystemTokenRegistered {
 			system_token_id: SystemTokenId,
 			system_token_metadata: SystemTokenMetadata,
 		},
-
-		AssetRemoved {
+		// Remove the system token.
+		SystemTokenRemoved {
 			system_token_id: SystemTokenId,
 			system_token_metadata: SystemTokenMetadata,
 		},
-
-		AssetConverted {
+		// Convert a wrapped system token id to an original system token id.
+		SystemTokenConverted {
 			wrapped_system_token: WrappedSystemTokenId,
 			system_token_id: SystemTokenId,
 		},
@@ -94,15 +136,18 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		AssetAlreadyRegistered,
-		AssetNotRegistered,
+		/// Failed to register a system token as it is already registered.
+		SystemTokenAlreadyRegistered,
+		/// Failed to remove the system token as it is not registered.
+		SystemTokenNotRegistered,
 	}
+
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
 
 	#[pallet::storage]
-	#[pallet::getter(fn relay_asset_link)]
+	#[pallet::getter(fn system_token_list)]
 	/// List for original system token and metadata.
 	pub(super) type SystemTokenList<T: Config> =
 		StorageMap<_, Twox64Concat, SystemTokenId, SystemTokenMetadata, OptionQuery>;
@@ -130,16 +175,16 @@ pub mod pallet {
 	pub(super) type AllowedSystemToken<T: Config> = StorageDoubleMap<
 		_,
 		Twox64Concat,
-		ParaId,
-		Twox64Concat,
 		PalletId,
+		Twox64Concat,
+		ParaAssetId,
 		WrappedSystemTokenId,
 		OptionQuery,
 	>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// Register a system token
+		/// Register a system token.
 		#[pallet::call_index(0)]
 		#[pallet::weight(1_000)]
 		pub fn register_system_token(
@@ -151,12 +196,12 @@ pub mod pallet {
 
 			ensure!(
 				!SystemTokenList::<T>::contains_key(&system_token_id),
-				Error::<T>::AssetAlreadyRegistered
+				Error::<T>::SystemTokenAlreadyRegistered
 			);
 
 			SystemTokenList::<T>::insert(&system_token_id, &system_token_metadata);
 
-			Self::deposit_event(Event::<T>::AssetRegistered {
+			Self::deposit_event(Event::<T>::SystemTokenRegistered {
 				system_token_id,
 				system_token_metadata,
 			});
@@ -164,9 +209,9 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Remove a system token
 		#[pallet::call_index(1)]
 		#[pallet::weight(1_000)]
+		/// Remove the system token.
 		pub fn remove_system_token(
 			origin: OriginFor<T>,
 			system_token_id: SystemTokenId,
@@ -174,8 +219,8 @@ pub mod pallet {
 			ensure_root(origin)?;
 
 			ensure!(
-				!SystemTokenList::<T>::contains_key(&system_token_id),
-				Error::<T>::AssetNotRegistered
+				SystemTokenList::<T>::contains_key(&system_token_id),
+				Error::<T>::SystemTokenNotRegistered
 			);
 
 			let system_token_metadata = {
@@ -187,7 +232,7 @@ pub mod pallet {
 
 			SystemTokenList::<T>::remove(&system_token_id);
 
-			Self::deposit_event(Event::<T>::AssetRemoved {
+			Self::deposit_event(Event::<T>::SystemTokenRemoved {
 				system_token_id,
 				system_token_metadata,
 			});
@@ -202,13 +247,13 @@ impl<T: Config> SystemTokenInterface for Pallet<T> {
 		if let Some(_) = <SystemTokenList<T>>::get(system_token) {
 			return true
 		}
-		return false
+		false
 	}
 	fn convert_to_original_system_token(
 		wrapped_system_token: WrappedSystemTokenId,
 	) -> Option<SystemTokenId> {
 		if let Some(s) = <SystemTokenOnParachain<T>>::get(&wrapped_system_token) {
-			Self::deposit_event(Event::<T>::AssetConverted {
+			Self::deposit_event(Event::<T>::SystemTokenConverted {
 				wrapped_system_token,
 				system_token_id: s.clone(),
 			});
