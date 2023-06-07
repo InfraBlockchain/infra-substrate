@@ -5,8 +5,8 @@
 /// <https://docs.substrate.io/reference/frame-pallets/>
 pub use pallet::*;
 
-use frame_support::traits::pot::VoteInfoHandler;
-use sp_runtime::generic::{VoteAccountId, VoteAssetId, VoteWeight};
+use frame_support::traits::pot::VotingHandler;
+use sp_runtime::generic::{VoteAccountId, VoteAssetId, VoteWeight, SystemTokenId};
 
 pub type AccountnAssetId<AccountId, VoteAssetId> = (AccountId, VoteAssetId);
 
@@ -42,7 +42,7 @@ pub mod pallet {
 	pub type PotVotes<T: Config> = StorageMap<
 		_,
 		Twox64Concat,
-		AccountnAssetId<VoteAccountId, VoteAssetId>,
+		AccountnAssetId<VoteAccountId, SystemTokenId>,
 		VoteWeight,
 		OptionQuery,
 	>;
@@ -58,20 +58,18 @@ pub mod pallet {
 	}
 }
 
-impl<T: Config> VoteInfoHandler for Pallet<T> {
-	type VoteAccountId = VoteAccountId;
-	type VoteAssetId = VoteAssetId;
-	type VoteWeight = VoteWeight;
-	fn update_pot_vote(who: VoteAccountId, asset_id: VoteAssetId, vote_weight: VoteWeight) {
+impl<T: Config> VotingHandler for Pallet<T> {
+
+	fn update_pot_vote(who: VoteAccountId, system_token_id: SystemTokenId, vote_weight: VoteWeight) {
 		// each vote_info is stored to VoteInfo StorageMap like: {key: (AccountId, VoteAssetId),
 		// value: VoteWeight }
-		let key = (who, asset_id);
+		let key = (who, system_token_id);
 		Self::do_update_pot_vote(key, vote_weight);
 	}
 }
 
 impl<T: Config> Pallet<T> {
-	fn do_update_pot_vote(key: (VoteAccountId, VoteAssetId), vote_weight: VoteWeight) {
+	fn do_update_pot_vote(key: (VoteAccountId, SystemTokenId), vote_weight: VoteWeight) {
 		if let Some(old_weight) = PotVotes::<T>::get(&key) {
 			// Weight for asset id already existed
 			let new_weight = old_weight.saturating_add(vote_weight);

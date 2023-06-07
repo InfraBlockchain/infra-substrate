@@ -27,7 +27,7 @@ use frame_support::{
 	dispatch::{DispatchInfo, DispatchResult, PostDispatchInfo},
 	pallet_prelude::*,
 	traits::{
-		pot::VoteInfoHandler,
+		pot::VotingHandler,
 		tokens::{
 			fungibles::{Balanced, CreditOf, Inspect},
 			WithdrawConsequence,
@@ -39,7 +39,7 @@ use frame_support::{
 use pallet_transaction_payment::OnChargeTransaction;
 use scale_info::TypeInfo;
 use sp_runtime::{
-	generic::{VoteAccountId, VoteAssetId, VoteWeight},
+	generic::{VoteAccountId, VoteAssetId, VoteWeight, SystemTokenId},
 	traits::{
 		AccountIdConversion, DispatchInfoOf, Dispatchable, PostDispatchInfoOf, SignedExtension,
 		Zero,
@@ -81,26 +81,23 @@ pub(crate) type ChargeAssetIdOf<T> =
 pub(crate) type ChargeAssetLiquidityOf<T> =
 	<<T as Config>::OnChargeAssetTransaction as OnChargeAssetTransaction<T>>::LiquidityInfo;
 
-/// Vote asset id type alias.
-pub(crate) type VoteAssetIdOf<T> = <<T as Config>::VoteInfoHandler as VoteInfoHandler>::VoteAssetId;
-
 /// Vote weight type alias.
-pub(crate) type VoteWeightOf<T> = <<T as Config>::VoteInfoHandler as VoteInfoHandler>::VoteWeight;
+// pub(crate) type VoteWeightOf<T> = <<T as Config>::VotingHandler as VotingHandler>::VoteWeight;
 
 // Vote info type alias
-pub(crate) type VoteAccountIdOf<T> =
-	<<T as Config>::VoteInfoHandler as VoteInfoHandler>::VoteAccountId;
+// pub(crate) type VoteAccountIdOf<T> =
+// 	<<T as Config>::VotingHandler as VotingHandler>::VoteAccountId;
 
 #[derive(Encode, Decode, Debug, Clone, TypeInfo, PartialEq)]
-pub struct FeeDetail<AssetId, Balance> {
-	asset_id: AssetId,
+pub struct FeeDetail<SystemTokenId, Balance> {
+	system_token_id: SystemTokenId,
 	amount: Balance
 }
 
-impl<AssetId, Balance> FeeDetail<AssetId, Balance> {
-	pub fn new(asset_id: AssetId, amount: Balance) -> Self {
+impl<SystemTokenId, Balance> FeeDetail<SystemTokenId, Balance> {
+	pub fn new(system_token_id: SystemTokenId, amount: Balance) -> Self {
 		Self {
-			asset_id, 
+			system_token_id, 
 			amount
 		}
 	}
@@ -148,11 +145,7 @@ pub mod pallet {
 		/// The actual transaction charging logic that charges the fees.
 		type OnChargeAssetTransaction: OnChargeAssetTransaction<Self>;
 		/// The type that handles the voting info.
-		type VoteInfoHandler: VoteInfoHandler<
-			VoteAccountId = VoteAccountId,
-			VoteAssetId = VoteAssetId,
-			VoteWeight = VoteWeight,
-		>;
+		type VotingHandler: VotingHandler;
 		/// The Pallet ID.
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
@@ -169,9 +162,9 @@ pub mod pallet {
 		/// has been paid by `who` in an asset `asset_id`.
 		AssetTxFeePaid {
 			fee_payer: T::AccountId,
-			fee_detail: FeeDetail<ChargeAssetIdOf<T>, ChargeAssetBalanceOf<T>>,
+			fee_detail: FeeDetail<SystemTokenId, ChargeAssetBalanceOf<T>>,
 			tip: Option<AssetBalanceOf<T>>,
-			vote_detail: VoteDetail<VoteAccountIdOf<T>, VoteWeightOf<T>>
+			vote_detail: VoteDetail<VoteAccountId, VoteWeight>
 		},
 	}
 
@@ -198,9 +191,9 @@ pub struct FeePaymentMetadata<T: Config> {
 	#[codec(compact)]
 	tip: BalanceOf<T>,
 	// which asset to pay the fee with
-	asset_id: Option<ChargeAssetIdOf<T>>,
+	system_token_id: Option<SystemTokenId>,
 	// whom to vote for
-	vote_candidate: Option<VoteAccountIdOf<T>>,
+	vote_candidate: Option<VoteAccountId>,
 }
 
 impl<T: Config> FeePaymentMetadata<T>
@@ -208,21 +201,21 @@ where
 	T::RuntimeCall: Dispatchable<Info = DispatchInfo, PostInfo = PostDispatchInfo>,
 	AssetBalanceOf<T>: Send + Sync + FixedPointOperand,
 	BalanceOf<T>: Send + Sync + FixedPointOperand + IsType<ChargeAssetBalanceOf<T>>,
-	ChargeAssetIdOf<T>: Send + Sync,
+	ChargeAssetIdOf<T>: Send + Sync + From<VoteAssetId>,
 	CreditOf<T::AccountId, T::Fungibles>: IsType<ChargeAssetLiquidityOf<T>>,
 {
 	// For benchmarking only
 	pub fn new() -> Self {
-		Self { tip: Default::default(), asset_id: None, vote_candidate: None }
+		Self { tip: Default::default(), system_token_id: None, vote_candidate: None }
 	}
 
 	/// Utility constructor. Used only in client/factory code.
 	pub fn from(
 		tip: BalanceOf<T>,
-		asset_id: Option<ChargeAssetIdOf<T>>,
-		vote_candidate: Option<VoteAccountIdOf<T>>,
+		system_token_id: Option<SystemTokenId>,
+		vote_candidate: Option<VoteAccountId>,
 	) -> Self {
-		Self { tip, asset_id, vote_candidate }
+		Self { tip, system_token_id, vote_candidate }
 	}
 
 	/// Fee withdrawal logic that dispatches to either `OnChargeAssetTransaction` or
@@ -238,12 +231,12 @@ where
 		debug_assert!(self.tip <= fee, "tip should be included in the computed fee");
 		if fee.is_zero() {
 			Ok((fee, InitialPayment::Nothing))
-		} else if let Some(asset_id) = self.asset_id {
+		} else if let Some(system_token_id) = self.system_token_id.clone() {
 			T::OnChargeAssetTransaction::withdraw_fee(
 				who,
 				call,
 				info,
-				asset_id,
+				system_token_id.asset_id.into(),
 				fee.into(),
 				self.tip.into(),
 			)
@@ -258,18 +251,18 @@ where
 	}
 
 	fn do_collect_vote(
-		candidate: VoteAccountIdOf<T>,
-		asset_id: VoteAssetIdOf<T>,
-		vote_weight: VoteWeightOf<T>,
+		candidate: VoteAccountId,
+		system_token_id: SystemTokenId,
+		vote_weight: VoteWeight,
 	) {
-		T::VoteInfoHandler::update_pot_vote(candidate.clone().into(), asset_id, vote_weight);
+		T::VotingHandler::update_pot_vote(candidate.clone().into(), system_token_id, vote_weight);
 	}
 }
 
 impl<T: Config> sp_std::fmt::Debug for FeePaymentMetadata<T> {
 	#[cfg(feature = "std")]
 	fn fmt(&self, f: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
-		write!(f, "FeePaymentMetadata<{:?}, {:?}>", self.tip, self.asset_id.encode())
+		write!(f, "FeePaymentMetadata<{:?}, {:?}>", self.tip, self.system_token_id.encode())
 	}
 	#[cfg(not(feature = "std"))]
 	fn fmt(&self, _: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
@@ -280,12 +273,10 @@ impl<T: Config> sp_std::fmt::Debug for FeePaymentMetadata<T> {
 impl<T: Config> SignedExtension for FeePaymentMetadata<T>
 where
 	T::RuntimeCall: Dispatchable<Info = DispatchInfo, PostInfo = PostDispatchInfo>,
-	AssetBalanceOf<T>: Send + Sync + FixedPointOperand,
+	AssetBalanceOf<T>: Send + Sync + FixedPointOperand + IsType<VoteWeight>,
 	BalanceOf<T>: Send + Sync + From<u64> + FixedPointOperand + IsType<ChargeAssetBalanceOf<T>>,
 	ChargeAssetIdOf<T>: Send + Sync,
 	CreditOf<T::AccountId, T::Fungibles>: IsType<ChargeAssetLiquidityOf<T>>,
-	VoteAssetIdOf<T>: Send + Sync + From<ChargeAssetIdOf<T>>,
-	VoteWeightOf<T>: Send + Sync + From<AssetBalanceOf<T>>,
 {
 	const IDENTIFIER: &'static str = "FeePaymentMetadata";
 	type AccountId = T::AccountId;
@@ -299,9 +290,9 @@ where
 		// imbalance resulting from withdrawing the fee
 		InitialPayment<T>,
 		// asset_id for the transaction payment
-		Option<ChargeAssetIdOf<T>>,
+		Option<SystemTokenId>,
 		// vote info included in the transaction. Should be same as Relay Chain's AccountId type
-		Option<VoteAccountIdOf<T>>,
+		Option<VoteAccountId>,
 	);
 
 	fn additional_signed(&self) -> sp_std::result::Result<(), TransactionValidityError> {
@@ -331,7 +322,7 @@ where
 	) -> Result<Self::Pre, TransactionValidityError> {
 		let (_fee, initial_payment) = self.withdraw_fee(who, call, info, len)?;
 
-		Ok((self.tip, who.clone(), initial_payment, self.asset_id, self.vote_candidate))
+		Ok((self.tip, who.clone(), initial_payment, self.system_token_id, self.vote_candidate))
 	}
 
 	fn post_dispatch(
@@ -341,7 +332,7 @@ where
 		len: usize,
 		result: &DispatchResult,
 	) -> Result<(), TransactionValidityError> {
-		if let Some((tip, who, initial_payment, asset_id, vote_candidate)) = pre {
+		if let Some((tip, who, initial_payment, system_token_id, vote_candidate)) = pre {
 			match initial_payment {
 				InitialPayment::Native(already_withdrawn) => {
 					pallet_transaction_payment::ChargeTransactionPayment::<T>::post_dispatch(
@@ -372,17 +363,17 @@ where
 						Some(converted_tip)
 					};
 					// update_vote_info is only excuted when vote_info has some data
-					match (&vote_candidate, &asset_id) {
-						(Some(vote_candidate), Some(asset_id)) => {
+					match (&vote_candidate, &system_token_id) {
+						(Some(vote_candidate), Some(system_token_id)) => {
 							Pallet::<T>::deposit_event(Event::<T>::AssetTxFeePaid {
 								fee_payer: who,
-								fee_detail: FeeDetail::<ChargeAssetIdOf<T>, ChargeAssetBalanceOf<T>>::new(asset_id.clone(), actual_fee.into()),
+								fee_detail: FeeDetail::<SystemTokenId, ChargeAssetBalanceOf<T>>::new(system_token_id.clone(), actual_fee.into()),
 								tip,
-								vote_detail: VoteDetail::<VoteAccountIdOf<T>, VoteWeightOf<T>>::new(vote_candidate.clone(), converted_fee.into())
+								vote_detail: VoteDetail::<VoteAccountId, VoteWeight>::new(vote_candidate.clone(), converted_fee.into())
 							});
 							Self::do_collect_vote(
 								vote_candidate.clone(),
-								asset_id.clone().into(),
+								system_token_id.clone(),
 								converted_fee.into(),
 							);
 						}
