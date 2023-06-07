@@ -81,13 +81,6 @@ pub(crate) type ChargeAssetIdOf<T> =
 pub(crate) type ChargeAssetLiquidityOf<T> =
 	<<T as Config>::OnChargeAssetTransaction as OnChargeAssetTransaction<T>>::LiquidityInfo;
 
-/// Vote weight type alias.
-// pub(crate) type VoteWeightOf<T> = <<T as Config>::VotingHandler as VotingHandler>::VoteWeight;
-
-// Vote info type alias
-// pub(crate) type VoteAccountIdOf<T> =
-// 	<<T as Config>::VotingHandler as VotingHandler>::VoteAccountId;
-
 #[derive(Encode, Decode, Debug, Clone, TypeInfo, PartialEq)]
 pub struct FeeDetail<SystemTokenId, Balance> {
 	system_token_id: SystemTokenId,

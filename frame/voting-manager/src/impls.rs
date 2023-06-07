@@ -53,11 +53,11 @@ impl<AccountId> SessionInterface<AccountId> for () {
 	}
 }
 
-pub trait VotingHandler<T> {
+pub trait VotingInterface<T> {
 	fn update_vote_status(who: VoteAccountId, weight: VoteWeight);
 }
 
-impl<T: Config> VotingHandler<T> for Pallet<T> {
+impl<T: Config> VotingInterface<T> for Pallet<T> {
 	fn update_vote_status(who: VoteAccountId, weight: VoteWeight) {
 		let vote_account_id: T::InfraVoteAccountId = who.into();
 		let vote_points: T::InfraVotePoints = weight.into();
@@ -68,7 +68,7 @@ impl<T: Config> VotingHandler<T> for Pallet<T> {
 	}
 }
 
-impl<T: Config> VotingHandler<T> for () {
+impl<T: Config> VotingInterface<T> for () {
 	fn update_vote_status(_: VoteAccountId, _: VoteWeight) {}
 }
 
