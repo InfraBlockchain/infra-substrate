@@ -21,7 +21,7 @@ use frame_support::{
 	pallet_prelude::*,
 	parameter_types,
 	traits::{
-		pot::VoteInfoHandler, AsEnsureOriginWithArg, ConstU32, ConstU64, ConstU8, FindAuthor,
+		pot::VotingHandler, AsEnsureOriginWithArg, ConstU32, ConstU64, ConstU8, FindAuthor,
 	},
 	weights::{Weight, WeightToFee as WeightToFeeT},
 	ConsensusEngineId,
@@ -31,7 +31,7 @@ use frame_system::EnsureRoot;
 use pallet_transaction_payment::CurrencyAdapter;
 use sp_core::H256;
 use sp_runtime::{
-	generic::{VoteAssetId, VoteWeight},
+	types::{VoteAssetId, VoteWeight, SystemTokenId},
 	testing::Header,
 	traits::{BlakeTwo256, ConvertInto, IdentityLookup, SaturatedConversion},
 };
@@ -211,10 +211,7 @@ pub struct MockVoteInfo {
 	pub vote_weight: VoteWeight,
 }
 
-impl VoteInfoHandler for MockVoteInfo {
-	type VoteAccountId = VoteAccountId;
-	type VoteAssetId = VoteAssetId;
-	type VoteWeight = VoteWeight;
+impl VotingHandler for MockVoteInfo {
 
 	fn update_pot_vote(_who: VoteAccountId, _asset_id: VoteAssetId, _vote_weight: VoteWeight) {
 		// this dummy body should be replaced to work fine
@@ -228,6 +225,6 @@ impl Config for Runtime {
 		pallet_assets::BalanceToAssetBalance<Balances, Runtime, ConvertInto>,
 		CreditToBucket,
 	>;
-	type VoteInfoHandler = MockVoteInfo;
+	type VotingHandler = MockVoteInfo;
 	type PalletId = PalletPalletId;
 }

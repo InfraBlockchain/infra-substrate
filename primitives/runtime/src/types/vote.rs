@@ -1,10 +1,11 @@
-use crate::{
-	codec::{Decode, Encode, MaxEncodedLen},
-	scale_info::TypeInfo,
-};
 
 use bounded_collections::{BoundedVec, ConstU32};
 use sp_core::crypto::AccountId32;
+use crate::{
+	codec::{Decode, Encode},
+	scale_info::TypeInfo,
+    types::token::SystemTokenId,
+};
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
 #[cfg(feature = "std")]
@@ -19,34 +20,6 @@ pub type VoteAssetId = u32;
 
 pub const MAX_VOTE_NUM: u32 = 16 * 1024;
 pub type PotVotesResult = BoundedVec<PotVote, ConstU32<MAX_VOTE_NUM>>;
-
-/// Data structure for Original system tokens
-#[derive(Clone, Encode, Decode, Eq, PartialEq, PartialOrd, Ord, sp_core::RuntimeDebug, Default, TypeInfo, MaxEncodedLen)]
-#[cfg_attr(feature = "std", derive(Hash, Serialize, Deserialize))]
-pub struct SystemTokenId {
-	/// ParaId where to use the system token. Especially, we assigned the relaychain as ParaID = 0
-	pub para_id: u32,
-	/// PalletId on the parachain where to use the system token
-	pub pallet_id: u32,
-	/// AssetId on the parachain where to use the system token
-	pub asset_id: VoteAssetId,
-}
-
-impl From<SystemTokenId> for VoteAssetId {
-	fn from(value: SystemTokenId) -> Self {
-		value.asset_id
-	}
-}
-
-impl SystemTokenId {
-	pub fn new(para_id: u32, pallet_id: u32, asset_id: VoteAssetId) -> Self {
-		Self {
-			para_id,
-			pallet_id,
-			asset_id 
-		}
-	}
-}
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, sp_core::RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Default, Hash))]

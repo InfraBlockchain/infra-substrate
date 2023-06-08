@@ -55,6 +55,7 @@ use scale_info::TypeInfo;
 
 pub mod curve;
 pub mod generic;
+pub mod types;
 pub mod legacy;
 mod multiaddress;
 pub mod offchain;

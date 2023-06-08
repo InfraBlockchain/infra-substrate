@@ -39,7 +39,7 @@ use frame_support::{
 use pallet_transaction_payment::OnChargeTransaction;
 use scale_info::TypeInfo;
 use sp_runtime::{
-	generic::{VoteAccountId, VoteAssetId, VoteWeight, SystemTokenId},
+	types::{VoteAccountId, VoteWeight, SystemTokenId},
 	traits::{
 		AccountIdConversion, DispatchInfoOf, Dispatchable, PostDispatchInfoOf, SignedExtension,
 		Zero,
@@ -153,12 +153,17 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// A transaction fee `actual_fee`, of which `tip` was added to the minimum inclusion fee,
 		/// has been paid by `who` in an asset `asset_id`.
-		AssetTxFeePaid {
+		AssetTxFeePaidAndVoted {
 			fee_payer: T::AccountId,
 			fee_detail: FeeDetail<SystemTokenId, ChargeAssetBalanceOf<T>>,
 			tip: Option<AssetBalanceOf<T>>,
 			vote_detail: VoteDetail<VoteAccountId, VoteWeight>
 		},
+		AssetTxFeePaid {
+			fee_payer: T::AccountId,
+			fee_detail: FeeDetail<SystemTokenId, ChargeAssetBalanceOf<T>>,
+			tip: Option<AssetBalanceOf<T>>,
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -183,7 +188,7 @@ pub struct FeePaymentMetadata<T: Config> {
 	// tip to be added for the block author
 	#[codec(compact)]
 	tip: BalanceOf<T>,
-	// which asset to pay the fee with
+	// Asset to pay the fee with
 	system_token_id: Option<SystemTokenId>,
 	// whom to vote for
 	vote_candidate: Option<VoteAccountId>,
@@ -194,7 +199,7 @@ where
 	T::RuntimeCall: Dispatchable<Info = DispatchInfo, PostInfo = PostDispatchInfo>,
 	AssetBalanceOf<T>: Send + Sync + FixedPointOperand,
 	BalanceOf<T>: Send + Sync + FixedPointOperand + IsType<ChargeAssetBalanceOf<T>>,
-	ChargeAssetIdOf<T>: Send + Sync + From<VoteAssetId>,
+	ChargeAssetIdOf<T>: Send + Sync + From<u32>,
 	CreditOf<T::AccountId, T::Fungibles>: IsType<ChargeAssetLiquidityOf<T>>,
 {
 	// For benchmarking only
@@ -358,7 +363,7 @@ where
 					// update_vote_info is only excuted when vote_info has some data
 					match (&vote_candidate, &system_token_id) {
 						(Some(vote_candidate), Some(system_token_id)) => {
-							Pallet::<T>::deposit_event(Event::<T>::AssetTxFeePaid {
+							Pallet::<T>::deposit_event(Event::<T>::AssetTxFeePaidAndVoted {
 								fee_payer: who,
 								fee_detail: FeeDetail::<SystemTokenId, ChargeAssetBalanceOf<T>>::new(system_token_id.clone(), actual_fee.into()),
 								tip,
@@ -369,7 +374,14 @@ where
 								system_token_id.clone(),
 								converted_fee.into(),
 							);
-						}
+						},
+						(None, Some(system_token_id)) => {
+							Pallet::<T>::deposit_event(Event::<T>::AssetTxFeePaid {
+								fee_payer: who,
+								fee_detail: FeeDetail::<SystemTokenId, ChargeAssetBalanceOf<T>>::new(system_token_id.clone(), actual_fee.into()),
+								tip,
+							})
+						},
 						_ => {},
 					}
 				},

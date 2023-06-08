@@ -1,11 +1,11 @@
 [package]
-name = "pallet-voting-manager"
+name = "pallet-validator-election"
 version = "0.1.0"
 authors = ["blockchain labs"]
 edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/InfraBlockChain/substrate/"
-description = "FRAME's Infra Voting"
+description = "FRAME for electing validator for InfraBlockspace"
 
 [dependencies]
 serde = { version = "1.0.136", optional = true }

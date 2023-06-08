@@ -35,7 +35,7 @@ use codec::{Decode, Encode, MaxEncodedLen};
 pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_runtime::{
-	generic::{VoteAssetId, VoteWeight, SystemTokenId},
+	types::{VoteAssetId, VoteWeight, SystemTokenId},
 	traits::ConstU32,
 	BoundedVec, RuntimeDebug, 
 };

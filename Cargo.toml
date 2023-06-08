@@ -111,7 +111,7 @@ members = [
 	"frame/identity",
 	"frame/im-online",
 	"frame/indices",
-	"frame/voting-manager",
+	"frame/validator-election",
 	"frame/lottery",
 	"frame/membership",
 	"frame/merkle-mountain-range",

@@ -1,5 +1,5 @@
 
-use sp_runtime::generic::{VoteAccountId, VoteWeight, SystemTokenId};
+use sp_runtime::types::{VoteAccountId, VoteWeight, SystemTokenId};
 /// An interface for dealing with vote info
 pub trait VotingHandler {
 
