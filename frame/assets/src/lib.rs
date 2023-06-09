@@ -516,6 +516,8 @@ pub mod pallet {
 		AssetStatusChanged { asset_id: T::AssetId },
 		/// The min_balance of an asset has been updated by the asset owner.
 		AssetMinBalanceChanged { asset_id: T::AssetId, new_min_balance: T::Balance },
+		/// The is_sufficient of an asset has been updated by the asset owner.
+		AssetIsSufficientChanged { asset_id: T::AssetId, new_is_sufficient: bool },
 	}
 
 	#[pallet::error]
@@ -1596,6 +1598,37 @@ pub mod pallet {
 
 			let f = TransferFlags { keep_alive: false, best_effort: false, burn_dust: false };
 			Self::do_transfer(id, &source, &dest, amount, None, f).map(|_| ())
+		}
+
+		/// Sets the is_sufficient flag of an asset.
+		///
+		///
+		/// Origin must be Signed and the sender has to be the root
+		///
+		/// - `id`: The identifier of the asset.
+		/// - `is_sufficient`: The new value of `is_sufficient`.
+		///
+		/// Emits `AssetIsSufficientChanged` event when successful.
+		#[pallet::call_index(30)]
+		#[pallet::weight(T::WeightInfo::set_min_balance())]
+		pub fn set_sufficient(
+			origin: OriginFor<T>,
+			id: T::AssetIdParameter,
+			is_sufficient: bool,
+		) -> DispatchResult {
+			T::ForceOrigin::ensure_origin(origin)?;
+			let id: T::AssetId = id.into();
+
+			let mut details = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
+
+			details.is_sufficient = is_sufficient;
+			Asset::<T, I>::insert(&id, details);
+
+			Self::deposit_event(Event::AssetIsSufficientChanged {
+				asset_id: id,
+				new_is_sufficient: is_sufficient,
+			});
+			Ok(())
 		}
 	}
 }
