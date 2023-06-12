@@ -207,21 +207,21 @@ parameter_types! {
 
 pub struct MockVoteInfo {
 	pub who: AccountId,
-	pub asset_id: VoteAssetId,
+	pub sytem_token_id: SystemTokenId,
 	pub vote_weight: VoteWeight,
 }
 
 impl VotingHandler for MockVoteInfo {
 
-	fn update_pot_vote(_who: VoteAccountId, _asset_id: VoteAssetId, _vote_weight: VoteWeight) {
+	fn update_pot_vote(_who: VoteAccountId, _sytem_token_id: SystemTokenId, _vote_weight: VoteWeight) {
 		// this dummy body should be replaced to work fine
 	}
 }
 
 impl Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type Fungibles = Assets;
-	type OnChargeAssetTransaction = FungiblesAdapter<
+	type Assets = Assets;
+	type OnChargeSystemToken = TransactionFeeCharger<
 		pallet_assets::BalanceToAssetBalance<Balances, Runtime, ConvertInto>,
 		CreditToBucket,
 	>;

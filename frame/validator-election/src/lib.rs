@@ -8,7 +8,7 @@ use frame_support::traits::{EstimateNextNewSession, Get};
 pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_runtime::{
-	types::{VoteAccountId, VoteAssetId, VoteWeight, SystemTokenId},
+	types::{VoteAccountId, VoteWeight, SystemTokenId},
 	traits::MaybeDisplay,
 	RuntimeDebug, Saturating,
 };

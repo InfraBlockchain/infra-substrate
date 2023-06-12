@@ -45,7 +45,7 @@ use sp_runtime::{
 		Zero,
 	},
 	transaction_validity::{
-		InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransaction,
+		TransactionValidity, TransactionValidityError, ValidTransaction,
 	},
 	FixedPointOperand,
 };
@@ -65,21 +65,22 @@ pub(crate) type LiquidityInfoOf<T> =
 // Type alias used for interaction with fungibles (assets).
 // Balance type alias.
 pub(crate) type AssetBalanceOf<T> =
-	<<T as Config>::Fungibles as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
+	<<T as Config>::Assets as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 /// Asset id type alias.
 pub(crate) type AssetIdOf<T> =
-	<<T as Config>::Fungibles as Inspect<<T as frame_system::Config>::AccountId>>::AssetId;
+	<<T as Config>::Assets as Inspect<<T as frame_system::Config>::AccountId>>::AssetId;
 
 // Type aliases used for interaction with `OnChargeAssetTransaction`.
 // Balance type alias.
 pub(crate) type ChargeAssetBalanceOf<T> =
-	<<T as Config>::OnChargeAssetTransaction as OnChargeAssetTransaction<T>>::Balance;
-// Asset id type alias.
-pub(crate) type ChargeAssetIdOf<T> =
-	<<T as Config>::OnChargeAssetTransaction as OnChargeAssetTransaction<T>>::AssetId;
+	<<T as Config>::OnChargeSystemToken as OnChargeSystemToken<T>>::Balance;
+
+pub(crate) type ChargeSystemTokenAssetIdOf<T> =
+	<<T as Config>::OnChargeSystemToken as OnChargeSystemToken<T>>::SystemTokenAssetId;
+
 // Liquity info type alias.
 pub(crate) type ChargeAssetLiquidityOf<T> =
-	<<T as Config>::OnChargeAssetTransaction as OnChargeAssetTransaction<T>>::LiquidityInfo;
+	<<T as Config>::OnChargeSystemToken as OnChargeSystemToken<T>>::LiquidityInfo;
 
 #[derive(Encode, Decode, Debug, Clone, TypeInfo, PartialEq)]
 pub struct FeeDetail<SystemTokenId, Balance> {
@@ -120,7 +121,7 @@ pub enum InitialPayment<T: Config> {
 	/// The initial fee was payed in the native currency.
 	Native(LiquidityInfoOf<T>),
 	/// The initial fee was payed in an asset.
-	Asset(CreditOf<T::AccountId, T::Fungibles>),
+	Asset(CreditOf<T::AccountId, T::Assets>),
 }
 
 pub use pallet::*;
@@ -134,9 +135,9 @@ pub mod pallet {
 		/// The overarching event type.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		/// The fungibles instance used to pay for transactions in assets.
-		type Fungibles: Balanced<Self::AccountId>;
+		type Assets: Balanced<Self::AccountId>;
 		/// The actual transaction charging logic that charges the fees.
-		type OnChargeAssetTransaction: OnChargeAssetTransaction<Self>;
+		type OnChargeSystemToken: OnChargeSystemToken<Self>;
 		/// The type that handles the voting info.
 		type VotingHandler: VotingHandler;
 		/// The Pallet ID.
@@ -153,17 +154,12 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// A transaction fee `actual_fee`, of which `tip` was added to the minimum inclusion fee,
 		/// has been paid by `who` in an asset `asset_id`.
-		AssetTxFeePaidAndVoted {
-			fee_payer: T::AccountId,
-			fee_detail: FeeDetail<SystemTokenId, ChargeAssetBalanceOf<T>>,
-			tip: Option<AssetBalanceOf<T>>,
-			vote_detail: VoteDetail<VoteAccountId, VoteWeight>
-		},
 		AssetTxFeePaid {
 			fee_payer: T::AccountId,
 			fee_detail: FeeDetail<SystemTokenId, ChargeAssetBalanceOf<T>>,
 			tip: Option<AssetBalanceOf<T>>,
-		}
+			vote_detail: Option<VoteDetail<VoteAccountId, VoteWeight>>
+		},
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -178,10 +174,6 @@ pub mod pallet {
 ///
 /// Wraps the transaction logic in [`pallet_transaction_payment`] and extends it with assets.
 /// An asset id of `None` falls back to the underlying transaction payment via the native currency.
-///
-/// Vote info should be included as an additional signed extension.
-/// Pay Master, , should be included as an additional signed extension.
-/// Pay master of `None` falls back to the underlying transaction payment via the signer.
 #[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo)]
 #[scale_info(skip_type_params(T))]
 pub struct FeePaymentMetadata<T: Config> {
@@ -199,8 +191,8 @@ where
 	T::RuntimeCall: Dispatchable<Info = DispatchInfo, PostInfo = PostDispatchInfo>,
 	AssetBalanceOf<T>: Send + Sync + FixedPointOperand,
 	BalanceOf<T>: Send + Sync + FixedPointOperand + IsType<ChargeAssetBalanceOf<T>>,
-	ChargeAssetIdOf<T>: Send + Sync + From<u32>,
-	CreditOf<T::AccountId, T::Fungibles>: IsType<ChargeAssetLiquidityOf<T>>,
+	ChargeSystemTokenAssetIdOf<T>: Send + Sync,
+	CreditOf<T::AccountId, T::Assets>: IsType<ChargeAssetLiquidityOf<T>>,
 {
 	// For benchmarking only
 	pub fn new() -> Self {
@@ -229,23 +221,31 @@ where
 		debug_assert!(self.tip <= fee, "tip should be included in the computed fee");
 		if fee.is_zero() {
 			Ok((fee, InitialPayment::Nothing))
-		} else if let Some(system_token_id) = self.system_token_id.clone() {
-			T::OnChargeAssetTransaction::withdraw_fee(
-				who,
-				call,
-				info,
-				system_token_id.asset_id.into(),
-				fee.into(),
-				self.tip.into(),
-			)
-			.map(|i| (fee, InitialPayment::Asset(i.into())))
 		} else {
-			<OnChargeTransactionOf<T> as OnChargeTransaction<T>>::withdraw_fee(
-				who, call, info, fee, self.tip,
-			)
-			.map(|i| (fee, InitialPayment::Native(i)))
-			.map_err(|_| -> TransactionValidityError { InvalidTransaction::Payment.into() })
-		}
+			if let Some(system_token_id) = self.system_token_id {
+				T::OnChargeSystemToken::withdraw_fee(
+					who,
+					call,
+					info,
+					Some(system_token_id.asset_id.into()),
+					fee.into(),
+					self.tip.into(),
+				)
+				.map(|i| (fee, InitialPayment::Asset(i.into())))
+			} else {
+				// ToDo: When system token id is not specified, the larget system tokens that caller hold will be used. 
+				// Right now, it is just return Error
+				T::OnChargeSystemToken::withdraw_fee(
+					who,
+					call,
+					info,
+					None,
+					fee.into(),
+					self.tip.into(),
+				)
+				.map(|i| (fee, InitialPayment::Asset(i.into())))
+			}
+		} 
 	}
 
 	fn do_collect_vote(
@@ -273,8 +273,8 @@ where
 	T::RuntimeCall: Dispatchable<Info = DispatchInfo, PostInfo = PostDispatchInfo>,
 	AssetBalanceOf<T>: Send + Sync + FixedPointOperand + IsType<VoteWeight>,
 	BalanceOf<T>: Send + Sync + From<u64> + FixedPointOperand + IsType<ChargeAssetBalanceOf<T>>,
-	ChargeAssetIdOf<T>: Send + Sync,
-	CreditOf<T::AccountId, T::Fungibles>: IsType<ChargeAssetLiquidityOf<T>>,
+	ChargeSystemTokenAssetIdOf<T>: Send + Sync,
+	CreditOf<T::AccountId, T::Assets>: IsType<ChargeAssetLiquidityOf<T>>,
 {
 	const IDENTIFIER: &'static str = "FeePaymentMetadata";
 	type AccountId = T::AccountId;
@@ -347,7 +347,7 @@ where
 					);
 
 					let (converted_fee, converted_tip) =
-						T::OnChargeAssetTransaction::correct_and_deposit_fee(
+						T::OnChargeSystemToken::correct_and_deposit_fee(
 							&who,
 							info,
 							post_info,
@@ -363,11 +363,11 @@ where
 					// update_vote_info is only excuted when vote_info has some data
 					match (&vote_candidate, &system_token_id) {
 						(Some(vote_candidate), Some(system_token_id)) => {
-							Pallet::<T>::deposit_event(Event::<T>::AssetTxFeePaidAndVoted {
+							Pallet::<T>::deposit_event(Event::<T>::AssetTxFeePaid {
 								fee_payer: who,
 								fee_detail: FeeDetail::<SystemTokenId, ChargeAssetBalanceOf<T>>::new(system_token_id.clone(), actual_fee.into()),
 								tip,
-								vote_detail: VoteDetail::<VoteAccountId, VoteWeight>::new(vote_candidate.clone(), converted_fee.into())
+								vote_detail: Some(VoteDetail::<VoteAccountId, VoteWeight>::new(vote_candidate.clone(), converted_fee.into()))
 							});
 							Self::do_collect_vote(
 								vote_candidate.clone(),
@@ -380,6 +380,7 @@ where
 								fee_payer: who,
 								fee_detail: FeeDetail::<SystemTokenId, ChargeAssetBalanceOf<T>>::new(system_token_id.clone(), actual_fee.into()),
 								tip,
+								vote_detail: None,
 							})
 						},
 						_ => {},

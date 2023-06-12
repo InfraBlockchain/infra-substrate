@@ -17,27 +17,26 @@
 use super::*;
 use crate::Config;
 
-use codec::FullCodec;
 use frame_support::{
 	traits::{
 		fungibles::{Balanced, CreditOf, Inspect},
-		tokens::{Balance, BalanceConversion},
+		tokens::{Balance, AssetId, BalanceConversion},
 	},
 	unsigned::TransactionValidityError,
 };
-use scale_info::TypeInfo;
+
 use sp_runtime::{
-	traits::{DispatchInfoOf, MaybeSerializeDeserialize, One, PostDispatchInfoOf},
+	traits::{DispatchInfoOf, One, PostDispatchInfoOf},
 	transaction_validity::InvalidTransaction,
 };
-use sp_std::{fmt::Debug, marker::PhantomData};
+use sp_std::marker::PhantomData;
 
 /// Handle withdrawing, refunding and depositing of transaction fees.
-pub trait OnChargeAssetTransaction<T: Config> {
+pub trait OnChargeSystemToken<T: Config> {
 	/// The underlying integer type in which fees are calculated.
 	type Balance: Balance;
 	/// The type used to identify the assets used for transaction payment.
-	type AssetId: FullCodec + Copy + MaybeSerializeDeserialize + Debug + Default + Eq + TypeInfo + From<u32>;
+	type SystemTokenAssetId: AssetId + From<sp_runtime::types::token::AssetId>;
 	/// The type used to store the intermediate values between pre- and post-dispatch.
 	type LiquidityInfo;
 
@@ -48,7 +47,7 @@ pub trait OnChargeAssetTransaction<T: Config> {
 		who: &T::AccountId,
 		call: &T::RuntimeCall,
 		dispatch_info: &DispatchInfoOf<T::RuntimeCall>,
-		asset_id: Self::AssetId,
+		system_token_asset_id: Option<Self::SystemTokenAssetId>,
 		fee: Self::Balance,
 		tip: Self::Balance,
 	) -> Result<Self::LiquidityInfo, TransactionValidityError>;
@@ -88,20 +87,20 @@ impl<A, B: Balanced<A>> HandleCredit<A, B> for () {
 /// [`BalanceConversion`]) and a credit handler (implementing [`HandleCredit`]).
 ///
 /// The credit handler is given the complete fee in terms of the asset used for the transaction.
-pub struct FungiblesAdapter<CON, HC>(PhantomData<(CON, HC)>);
+pub struct TransactionFeeCharger<CON, HC>(PhantomData<(CON, HC)>);
 
 /// Default implementation for a runtime instantiating this pallet, a balance to asset converter and
 /// a credit handler.
-impl<T, CON, HC> OnChargeAssetTransaction<T> for FungiblesAdapter<CON, HC>
+impl<T, CON, HC> OnChargeSystemToken<T> for TransactionFeeCharger<CON, HC>
 where
 	T: Config,
 	CON: BalanceConversion<BalanceOf<T>, AssetIdOf<T>, AssetBalanceOf<T>>,
-	HC: HandleCredit<T::AccountId, T::Fungibles>,
-	AssetIdOf<T>: FullCodec + Copy + MaybeSerializeDeserialize + Debug + Default + Eq + TypeInfo + From<u32>,
+	HC: HandleCredit<T::AccountId, T::Assets>,
+	AssetIdOf<T>: AssetId + From<sp_runtime::types::token::AssetId>,
 {
 	type Balance = BalanceOf<T>;
-	type AssetId = AssetIdOf<T>;
-	type LiquidityInfo = CreditOf<T::AccountId, T::Fungibles>;
+	type SystemTokenAssetId = AssetIdOf<T>;
+	type LiquidityInfo = CreditOf<T::AccountId, T::Assets>;
 
 	/// Withdraw the predicted fee from the transaction origin.
 	///
@@ -110,23 +109,27 @@ where
 		who: &T::AccountId,
 		_call: &T::RuntimeCall,
 		_info: &DispatchInfoOf<T::RuntimeCall>,
-		asset_id: Self::AssetId,
+		// which asset to pay
+		system_token_asset_id: Option<Self::SystemTokenAssetId>,
+		// actual fee
 		fee: Self::Balance,
 		_tip: Self::Balance,
 	) -> Result<Self::LiquidityInfo, TransactionValidityError> {
 		// We don't know the precision of the underlying asset. Because the converted fee could be
 		// less than one (e.g. 0.5) but gets rounded down by integer division we introduce a minimum
 		// fee.
+		// If system_token_asset_id is None, return invalid transaction
+		let system_token_asset_id = system_token_asset_id.ok_or(TransactionValidityError::from(InvalidTransaction::Payment))?;
 		let min_converted_fee = if fee.is_zero() { Zero::zero() } else { One::one() };
-		let converted_fee = CON::to_asset_balance(fee, asset_id)
+		let converted_fee = CON::to_asset_balance(fee, system_token_asset_id)
 			.map_err(|_| TransactionValidityError::from(InvalidTransaction::Payment))?
 			.max(min_converted_fee);
 		let can_withdraw =
-			<T::Fungibles as Inspect<T::AccountId>>::can_withdraw(asset_id, who, converted_fee);
+			<T::Assets as Inspect<T::AccountId>>::can_withdraw(system_token_asset_id, who, converted_fee);
 		if !matches!(can_withdraw, WithdrawConsequence::Success) {
 			return Err(InvalidTransaction::Payment.into())
 		}
-		<T::Fungibles as Balanced<T::AccountId>>::withdraw(asset_id, who, converted_fee)
+		<T::Assets as Balanced<T::AccountId>>::withdraw(system_token_asset_id, who, converted_fee)
 			.map_err(|_| TransactionValidityError::from(InvalidTransaction::Payment))
 	}
 
@@ -156,7 +159,7 @@ where
 		let (final_fee, refund) = paid.split(converted_fee);
 		// Refund to the account that paid the fees. If this fails, the account might have dropped
 		// below the existential balance. In that case we don't refund anything.
-		let _ = <T::Fungibles as Balanced<T::AccountId>>::resolve(who, refund);
+		let _ = <T::Assets as Balanced<T::AccountId>>::resolve(who, refund);
 		// Handle the final fee, e.g. by transferring to the block author or burning.
 		HC::handle_credit(final_fee);
 		Ok((converted_fee, converted_tip))

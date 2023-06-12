@@ -1,9 +1,9 @@
 
-mod token;
+pub mod token;
 mod vote;
 
 pub use self::{
-    token::{SystemTokenId, AssetId},
+    token::SystemTokenId,
     vote::{
         PotVote, PotVotes, PotVotesResult, 
         VoteAccountId, VoteAssetId, VoteWeight
