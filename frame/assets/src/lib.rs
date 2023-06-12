@@ -1630,6 +1630,71 @@ pub mod pallet {
 			});
 			Ok(())
 		}
+
+		/// Issue a new class of fungible assets with metadata from a privileged origin.
+		///
+		/// This new asset class has no assets initially.
+		///
+		/// The origin must conform to `ForceOrigin`.
+		///
+		/// Unlike `create`, no funds are reserved.
+		///
+		/// - `id`: The identifier of the new asset. This must not be currently in use to identify
+		/// an existing asset.
+		/// - `owner`: The owner of this class of assets. The owner has full superuser permissions
+		/// over this asset, but may later change and configure the permissions using
+		/// `transfer_ownership` and `set_team`.
+		/// - `min_balance`: The minimum balance of this new asset that any single account must
+		/// have. If an account's balance is reduced below this, then it collapses to zero.
+		///
+		/// Emits `ForceCreated` event when successful.
+		///
+		/// Weight: `O(1)`
+		#[pallet::call_index(31)]
+		#[pallet::weight(T::WeightInfo::force_set_metadata(name.len() as u32, symbol.len() as u32))]
+		pub fn force_create_with_metadata(
+			origin: OriginFor<T>,
+			id: T::AssetIdParameter,
+			owner: AccountIdLookupOf<T>,
+			is_sufficient: bool,
+			#[pallet::compact] min_balance: T::Balance,
+			name: Vec<u8>,
+			symbol: Vec<u8>,
+			decimals: u8,
+			is_frozen: bool,
+		) -> DispatchResult {
+			T::ForceOrigin::ensure_origin(origin)?;
+			let owner = T::Lookup::lookup(owner)?;
+			let id: T::AssetId = id.into();
+
+			let bounded_name: BoundedVec<u8, T::StringLimit> =
+				name.clone().try_into().map_err(|_| Error::<T, I>::BadMetadata)?;
+
+			let bounded_symbol: BoundedVec<u8, T::StringLimit> =
+				symbol.clone().try_into().map_err(|_| Error::<T, I>::BadMetadata)?;
+
+			ensure!(Asset::<T, I>::contains_key(id), Error::<T, I>::Unknown);
+			let _ = Self::do_force_create(id, owner, is_sufficient, min_balance);
+			Metadata::<T, I>::try_mutate_exists(id, |metadata| {
+				let deposit = metadata.take().map_or(Zero::zero(), |m| m.deposit);
+				*metadata = Some(AssetMetadata {
+					deposit,
+					name: bounded_name,
+					symbol: bounded_symbol,
+					decimals,
+					is_frozen,
+				});
+
+				Self::deposit_event(Event::MetadataSet {
+					asset_id: id,
+					name,
+					symbol,
+					decimals,
+					is_frozen,
+				});
+				Ok(())
+			})
+		}
 	}
 }
 
