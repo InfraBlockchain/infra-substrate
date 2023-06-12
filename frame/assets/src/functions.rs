@@ -931,4 +931,20 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 			.filter_map(|id| Self::maybe_balance(id, account.clone()).map(|balance| (id, balance)))
 			.collect::<Vec<_>>()
 	}
+
+	/// Returns most balance for the given asset id.
+	pub fn get_most_account_balance(
+		asset_ids: impl IntoIterator<Item = T::AssetId>,
+		account: T::AccountId,
+	) -> Option<(T::AssetId, T::Balance)> {
+		let mut most_balance: Option<(T::AssetId, T::Balance)> = None;
+		for asset_id in asset_ids {
+			if let Some(balance) = Self::maybe_balance(asset_id, account.clone()) {
+				if None == most_balance || (most_balance.unwrap().1 < balance) {
+					most_balance = Some((asset_id, balance));
+				}
+			}
+		}
+		most_balance
+	}
 }
