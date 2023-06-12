@@ -1,11 +1,5 @@
-
-use sp_runtime::types::{VoteAccountId, VoteWeight, SystemTokenId};
+use sp_runtime::types::{SystemTokenId, VoteAccountId, VoteWeight};
 /// An interface for dealing with vote info
 pub trait VotingHandler {
-
-	fn update_pot_vote(
-		who: VoteAccountId,
-		system_token_id: SystemTokenId,
-		vote_weight: VoteWeight,
-	);
+	fn update_pot_vote(who: VoteAccountId, system_token_id: SystemTokenId, vote_weight: VoteWeight);
 }

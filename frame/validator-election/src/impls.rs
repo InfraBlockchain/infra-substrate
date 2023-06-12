@@ -3,13 +3,22 @@ use crate::*;
 /// Something that handles fee reward
 pub trait RewardInterface {
 	/// Fee will be aggregated on certain account for current session
-	fn aggregate_reward(session_index: SessionIndex, system_token_id: SystemTokenId, amount: VoteWeight);
+	fn aggregate_reward(
+		session_index: SessionIndex,
+		system_token_id: SystemTokenId,
+		amount: VoteWeight,
+	);
 	/// Fee will be distributed to the validators for current session
 	fn distribute_reward(session_index: SessionIndex);
 }
 
 impl RewardInterface for () {
-	fn aggregate_reward(_session_index: SessionIndex, _system_token_id: SystemTokenId, _amount: VoteWeight) {}
+	fn aggregate_reward(
+		_session_index: SessionIndex,
+		_system_token_id: SystemTokenId,
+		_amount: VoteWeight,
+	) {
+	}
 	fn distribute_reward(_session_index: SessionIndex) {}
 }
 
@@ -24,14 +33,14 @@ pub trait SessionInterface<AccountId> {
 	fn prune_historical_up_to(up_to: SessionIndex);
 }
 
-impl<T: Config> SessionInterface<<T as frame_system::Config>::AccountId> for T 
+impl<T: Config> SessionInterface<<T as frame_system::Config>::AccountId> for T
 where
 	T: pallet_session::Config<ValidatorId = <T as frame_system::Config>::AccountId>,
 {
 	fn disable_validator(validator_index: u32) -> bool {
 		pallet_session::Pallet::<T>::disable_index(validator_index)
 	}
-	
+
 	fn validators() -> Vec<<T as frame_system::Config>::AccountId> {
 		pallet_session::Pallet::<T>::validators()
 	}
@@ -174,9 +183,7 @@ impl<T: Config> Pallet<T> {
 			era.unwrap()
 		});
 		StartSessionIndexPerEra::<T>::insert(&new_planned_era, session_index);
-		Self::deposit_event(
-			Event::<T>::NewEraTriggered { era_index: new_planned_era }
-		);
+		Self::deposit_event(Event::<T>::NewEraTriggered { era_index: new_planned_era });
 		Some(Self::elect_validators(new_planned_era))
 
 		// Clean old era information.
@@ -208,7 +215,7 @@ impl<T: Config> Pallet<T> {
 		if old_validators == new_validators {
 			Self::deposit_event(Event::<T>::ValidatorsNotChanged);
 			return old_validators
-		} 
+		}
 		Self::deposit_event(Event::<T>::ValidatorsElected {
 			validators: new_validators.clone(),
 			pot_enabled,
@@ -228,7 +235,7 @@ impl<T: Config> Pallet<T> {
 		// ToDo: Maybe this should be sorted
 		if old == new {
 			Self::deposit_event(Event::<T>::ValidatorsNotChanged);
-			return old;
+			return old
 		}
 		SeedTrustValidators::<T>::put(&new);
 		Self::deposit_event(Event::<T>::SeedTrustValidatorsElected { validators: new.clone() });
@@ -244,12 +251,12 @@ impl<T: Config> Pallet<T> {
 		let old = PotValidators::<T>::get();
 		if new.is_empty() {
 			Self::deposit_event(Event::<T>::EmptyPotValidatorPool);
-			return new; 
+			return new
 		}
 		// ToDo: Maybe this should be sorted
 		if old == new {
 			Self::deposit_event(Event::<T>::ValidatorsNotChanged);
-			return old;
+			return old
 		}
 		PotValidators::<T>::put(&new);
 		Self::deposit_event(Event::<T>::PotValidatorsElected { validators: new.clone() });

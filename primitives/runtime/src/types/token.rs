@@ -1,4 +1,3 @@
-
 use crate::{
 	codec::{Decode, Encode, MaxEncodedLen},
 	scale_info::TypeInfo,
@@ -13,7 +12,20 @@ type PalletId = u32;
 pub type AssetId = u32;
 
 /// Data structure for Original system tokens
-#[derive(Clone, Encode, Decode, Copy, Eq, PartialEq, PartialOrd, Ord, sp_core::RuntimeDebug, Default, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Clone,
+	Encode,
+	Decode,
+	Copy,
+	Eq,
+	PartialEq,
+	PartialOrd,
+	Ord,
+	sp_core::RuntimeDebug,
+	Default,
+	TypeInfo,
+	MaxEncodedLen,
+)]
 #[cfg_attr(feature = "std", derive(Hash, Serialize, Deserialize))]
 pub struct SystemTokenId {
 	/// ParaId where to use the system token. Especially, we assigned the relaychain as ParaID = 0
@@ -29,10 +41,6 @@ pub struct SystemTokenId {
 
 impl SystemTokenId {
 	pub fn new(para_id: u32, pallet_id: u32, asset_id: AssetId) -> Self {
-		Self {
-			para_id,
-			pallet_id,
-			asset_id 
-		}
+		Self { para_id, pallet_id, asset_id }
 	}
 }

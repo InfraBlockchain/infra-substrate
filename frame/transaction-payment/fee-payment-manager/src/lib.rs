@@ -39,14 +39,12 @@ use frame_support::{
 use pallet_transaction_payment::OnChargeTransaction;
 use scale_info::TypeInfo;
 use sp_runtime::{
-	types::{VoteAccountId, VoteWeight, SystemTokenId},
 	traits::{
 		AccountIdConversion, DispatchInfoOf, Dispatchable, PostDispatchInfoOf, SignedExtension,
 		Zero,
 	},
-	transaction_validity::{
-		TransactionValidity, TransactionValidityError, ValidTransaction,
-	},
+	transaction_validity::{TransactionValidity, TransactionValidityError, ValidTransaction},
+	types::{SystemTokenId, VoteAccountId, VoteWeight},
 	FixedPointOperand,
 };
 
@@ -85,15 +83,12 @@ pub(crate) type ChargeAssetLiquidityOf<T> =
 #[derive(Encode, Decode, Debug, Clone, TypeInfo, PartialEq)]
 pub struct FeeDetail<SystemTokenId, Balance> {
 	system_token_id: SystemTokenId,
-	amount: Balance
+	amount: Balance,
 }
 
 impl<SystemTokenId, Balance> FeeDetail<SystemTokenId, Balance> {
 	pub fn new(system_token_id: SystemTokenId, amount: Balance) -> Self {
-		Self {
-			system_token_id, 
-			amount
-		}
+		Self { system_token_id, amount }
 	}
 }
 
@@ -105,10 +100,7 @@ pub struct VoteDetail<VoteAccountId, VoteWeight> {
 
 impl<VoteAccountId, VoteWeight> VoteDetail<VoteAccountId, VoteWeight> {
 	pub fn new(candidate: VoteAccountId, weight: VoteWeight) -> Self {
-		Self {
-			candidate,
-			weight
-		}
+		Self { candidate, weight }
 	}
 }
 
@@ -158,7 +150,7 @@ pub mod pallet {
 			fee_payer: T::AccountId,
 			fee_detail: FeeDetail<SystemTokenId, ChargeAssetBalanceOf<T>>,
 			tip: Option<AssetBalanceOf<T>>,
-			vote_detail: Option<VoteDetail<VoteAccountId, VoteWeight>>
+			vote_detail: Option<VoteDetail<VoteAccountId, VoteWeight>>,
 		},
 	}
 
@@ -233,8 +225,8 @@ where
 				)
 				.map(|i| (fee, InitialPayment::Asset(i.into())))
 			} else {
-				// ToDo: When system token id is not specified, the larget system tokens that caller hold will be used. 
-				// Right now, it is just return Error
+				// ToDo: When system token id is not specified, the larget system tokens that caller
+				// hold will be used. Right now, it is just return Error
 				T::OnChargeSystemToken::withdraw_fee(
 					who,
 					call,
@@ -245,7 +237,7 @@ where
 				)
 				.map(|i| (fee, InitialPayment::Asset(i.into())))
 			}
-		} 
+		}
 	}
 
 	fn do_collect_vote(
@@ -355,19 +347,23 @@ where
 							tip.into(),
 							already_withdrawn.into(),
 						)?;
-					let tip: Option<AssetBalanceOf<T>> = if converted_tip.is_zero() {
-						None
-					} else {
-						Some(converted_tip)
-					};
+					let tip: Option<AssetBalanceOf<T>> =
+						if converted_tip.is_zero() { None } else { Some(converted_tip) };
 					// update_vote_info is only excuted when vote_info has some data
 					match (&vote_candidate, &system_token_id) {
 						(Some(vote_candidate), Some(system_token_id)) => {
 							Pallet::<T>::deposit_event(Event::<T>::AssetTxFeePaid {
 								fee_payer: who,
-								fee_detail: FeeDetail::<SystemTokenId, ChargeAssetBalanceOf<T>>::new(system_token_id.clone(), actual_fee.into()),
+								fee_detail:
+									FeeDetail::<SystemTokenId, ChargeAssetBalanceOf<T>>::new(
+										system_token_id.clone(),
+										actual_fee.into(),
+									),
 								tip,
-								vote_detail: Some(VoteDetail::<VoteAccountId, VoteWeight>::new(vote_candidate.clone(), converted_fee.into()))
+								vote_detail: Some(VoteDetail::<VoteAccountId, VoteWeight>::new(
+									vote_candidate.clone(),
+									converted_fee.into(),
+								)),
 							});
 							Self::do_collect_vote(
 								vote_candidate.clone(),
@@ -375,14 +371,17 @@ where
 								converted_fee.into(),
 							);
 						},
-						(None, Some(system_token_id)) => {
+						(None, Some(system_token_id)) =>
 							Pallet::<T>::deposit_event(Event::<T>::AssetTxFeePaid {
 								fee_payer: who,
-								fee_detail: FeeDetail::<SystemTokenId, ChargeAssetBalanceOf<T>>::new(system_token_id.clone(), actual_fee.into()),
+								fee_detail:
+									FeeDetail::<SystemTokenId, ChargeAssetBalanceOf<T>>::new(
+										system_token_id.clone(),
+										actual_fee.into(),
+									),
 								tip,
 								vote_detail: None,
-							})
-						},
+							}),
 						_ => {},
 					}
 				},

@@ -8,8 +8,8 @@ use frame_support::traits::{EstimateNextNewSession, Get};
 pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_runtime::{
-	types::{VoteAccountId, VoteWeight, SystemTokenId},
 	traits::MaybeDisplay,
+	types::{SystemTokenId, VoteAccountId, VoteWeight},
 	RuntimeDebug, Saturating,
 };
 
@@ -156,7 +156,7 @@ pub mod pallet {
 		/// Interface for interacting with a session pallet.
 		type SessionInterface: SessionInterface<Self::AccountId>;
 
-		/// Interface for fee reward 
+		/// Interface for fee reward
 		type RewardInterface: RewardInterface;
 	}
 
@@ -219,18 +219,16 @@ pub mod pallet {
 		/// Validators have been elected by PoT
 		PotValidatorsElected { validators: Vec<T::AccountId> },
 		/// Min vote weight has been set
-		MinVotePointsChanged {
-			old: T::InfraVotePoints,
-			new: T::InfraVotePoints,
-		},
-		/// If new validator set is same as old validator. This could be caused by seed trust/pot election.
+		MinVotePointsChanged { old: T::InfraVotePoints, new: T::InfraVotePoints },
+		/// If new validator set is same as old validator. This could be caused by seed trust/pot
+		/// election.
 		ValidatorsNotChanged,
 		/// When there is no candidate validator in PotValidatorPool
 		EmptyPotValidatorPool,
 		/// A new force era mode was set.
 		ForceEra { mode: Forcing },
 		/// New era has triggered
-		NewEraTriggered { era_index: EraIndex }
+		NewEraTriggered { era_index: EraIndex },
 	}
 
 	#[pallet::error]
@@ -251,7 +249,7 @@ pub mod pallet {
 	#[pallet::unbounded]
 	pub type PotValidatorPool<T: Config> = StorageValue<_, VotingStatus<T>, ValueQuery>;
 
-	// Candidate Seed Trust validators set 
+	// Candidate Seed Trust validators set
 	#[pallet::storage]
 	#[pallet::unbounded]
 	pub type SeedTrustValidatorPool<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
@@ -259,14 +257,12 @@ pub mod pallet {
 	/// Current Seed Trust validators
 	#[pallet::storage]
 	#[pallet::unbounded]
-	pub type SeedTrustValidators<T: Config> =
-		StorageValue<_, Vec<T::AccountId>, ValueQuery>;
+	pub type SeedTrustValidators<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
 
 	/// Validators which have been elected by PoT
 	#[pallet::storage]
 	#[pallet::unbounded]
-	pub type PotValidators<T: Config> =
-		StorageValue<_, Vec<T::AccountId>, ValueQuery>;
+	pub type PotValidators<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
 
 	/// Number of seed trust validators that can be elected
 	#[pallet::storage]
@@ -341,18 +337,15 @@ pub mod pallet {
 
 		#[pallet::call_index(3)]
 		#[pallet::weight(0)]
-		pub fn set_min_vote_weight_threshold(origin: OriginFor<T>, new: T::InfraVotePoints) -> DispatchResult {
-
+		pub fn set_min_vote_weight_threshold(
+			origin: OriginFor<T>,
+			new: T::InfraVotePoints,
+		) -> DispatchResult {
 			// Only root can call
 			ensure_root(origin)?;
 			let old = MinVotePointsThreshold::<T>::get();
 			MinVotePointsThreshold::<T>::put(new);
-			Self::deposit_event(
-				Event::<T>::MinVotePointsChanged {
-					old,
-					new
-				}
-			);
+			Self::deposit_event(Event::<T>::MinVotePointsChanged { old, new });
 
 			Ok(())
 		}

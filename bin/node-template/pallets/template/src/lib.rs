@@ -6,7 +6,7 @@
 pub use pallet::*;
 
 use frame_support::traits::pot::VotingHandler;
-use sp_runtime::types::{VoteAccountId, VoteAssetId, VoteWeight, SystemTokenId};
+use sp_runtime::types::{SystemTokenId, VoteAccountId, VoteAssetId, VoteWeight};
 
 pub type AccountnAssetId<AccountId, VoteAssetId> = (AccountId, VoteAssetId);
 
@@ -59,8 +59,11 @@ pub mod pallet {
 }
 
 impl<T: Config> VotingHandler for Pallet<T> {
-
-	fn update_pot_vote(who: VoteAccountId, system_token_id: SystemTokenId, vote_weight: VoteWeight) {
+	fn update_pot_vote(
+		who: VoteAccountId,
+		system_token_id: SystemTokenId,
+		vote_weight: VoteWeight,
+	) {
 		// each vote_info is stored to VoteInfo StorageMap like: {key: (AccountId, VoteAssetId),
 		// value: VoteWeight }
 		let key = (who, system_token_id);

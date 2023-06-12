@@ -1,11 +1,10 @@
-
-use bounded_collections::{BoundedVec, ConstU32};
-use sp_core::crypto::AccountId32;
 use crate::{
 	codec::{Decode, Encode},
 	scale_info::TypeInfo,
-    types::token::SystemTokenId,
+	types::token::SystemTokenId,
 };
+use bounded_collections::{BoundedVec, ConstU32};
+use sp_core::crypto::AccountId32;
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
 #[cfg(feature = "std")]
@@ -32,7 +31,11 @@ pub struct PotVote {
 }
 
 impl PotVote {
-	pub fn new(system_token_id: SystemTokenId, account_id: VoteAccountId, vote_weight: VoteWeight) -> Self {
+	pub fn new(
+		system_token_id: SystemTokenId,
+		account_id: VoteAccountId,
+		vote_weight: VoteWeight,
+	) -> Self {
 		Self { system_token_id, account_id, vote_weight }
 	}
 }
@@ -53,7 +56,11 @@ pub struct PotVotes {
 
 /// An interface for dealing with vote info
 impl PotVotes {
-	pub fn new(system_token_id: SystemTokenId, candidate: VoteAccountId, vote_weight: VoteWeight) -> Self {
+	pub fn new(
+		system_token_id: SystemTokenId,
+		candidate: VoteAccountId,
+		vote_weight: VoteWeight,
+	) -> Self {
 		let mut votes = BTreeMap::new();
 		votes.insert((system_token_id, candidate), vote_weight);
 		Self { votes, vote_count: 1, max_vote_count: MAX_VOTE_NUM }
@@ -129,10 +136,23 @@ mod tests {
 	fn get_votes_works() {
 		let candidate: VoteAccountId = AccountId32::new([0u8; 32]);
 		let vote_weight: VoteWeight = 1;
-		let mut pot_votes = new_pot_votes(SystemTokenId::new(2000, 50, 99), candidate.clone(), vote_weight);
-		pot_votes.update_vote_weight(SystemTokenId::new(2000, 50, 98), candidate.clone(), vote_weight);
-		pot_votes.update_vote_weight(SystemTokenId::new(2000, 50, 97), candidate.clone(), vote_weight);
-		pot_votes.update_vote_weight(SystemTokenId::new(2000, 50, 96), candidate.clone(), vote_weight);
+		let mut pot_votes =
+			new_pot_votes(SystemTokenId::new(2000, 50, 99), candidate.clone(), vote_weight);
+		pot_votes.update_vote_weight(
+			SystemTokenId::new(2000, 50, 98),
+			candidate.clone(),
+			vote_weight,
+		);
+		pot_votes.update_vote_weight(
+			SystemTokenId::new(2000, 50, 97),
+			candidate.clone(),
+			vote_weight,
+		);
+		pot_votes.update_vote_weight(
+			SystemTokenId::new(2000, 50, 96),
+			candidate.clone(),
+			vote_weight,
+		);
 		sp_std::if_std! {
 			println!("Votes : {:?}", pot_votes.votes());
 		}

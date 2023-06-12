@@ -20,9 +20,7 @@ use frame_support::{
 	dispatch::DispatchClass,
 	pallet_prelude::*,
 	parameter_types,
-	traits::{
-		pot::VotingHandler, AsEnsureOriginWithArg, ConstU32, ConstU64, ConstU8, FindAuthor,
-	},
+	traits::{pot::VotingHandler, AsEnsureOriginWithArg, ConstU32, ConstU64, ConstU8, FindAuthor},
 	weights::{Weight, WeightToFee as WeightToFeeT},
 	ConsensusEngineId,
 };
@@ -31,9 +29,9 @@ use frame_system::EnsureRoot;
 use pallet_transaction_payment::CurrencyAdapter;
 use sp_core::H256;
 use sp_runtime::{
-	types::{VoteAssetId, VoteWeight, SystemTokenId},
 	testing::Header,
 	traits::{BlakeTwo256, ConvertInto, IdentityLookup, SaturatedConversion},
+	types::{SystemTokenId, VoteAssetId, VoteWeight},
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
@@ -212,8 +210,11 @@ pub struct MockVoteInfo {
 }
 
 impl VotingHandler for MockVoteInfo {
-
-	fn update_pot_vote(_who: VoteAccountId, _sytem_token_id: SystemTokenId, _vote_weight: VoteWeight) {
+	fn update_pot_vote(
+		_who: VoteAccountId,
+		_sytem_token_id: SystemTokenId,
+		_vote_weight: VoteWeight,
+	) {
 		// this dummy body should be replaced to work fine
 	}
 }

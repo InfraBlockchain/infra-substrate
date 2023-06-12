@@ -96,13 +96,14 @@ fn pot_works() {
 				}
 			);
 			progress_block(11);
-			let queued_keys = Session::queued_keys().iter().map(|v| v.0.clone()).collect::<Vec<AccountId>>();
+			let queued_keys =
+				Session::queued_keys().iter().map(|v| v.0.clone()).collect::<Vec<AccountId>>();
 			assert_eq!(
 				queued_keys,
 				vec![
-						sp_keyring::Sr25519Keyring::Alice.to_account_id(),
-						sp_keyring::Sr25519Keyring::Bob.to_account_id(),
-						sp_keyring::Sr25519Keyring::Ferdie.to_account_id(),
+					sp_keyring::Sr25519Keyring::Alice.to_account_id(),
+					sp_keyring::Sr25519Keyring::Bob.to_account_id(),
+					sp_keyring::Sr25519Keyring::Ferdie.to_account_id(),
 				],
 			)
 		})

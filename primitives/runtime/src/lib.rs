@@ -55,7 +55,6 @@ use scale_info::TypeInfo;
 
 pub mod curve;
 pub mod generic;
-pub mod types;
 pub mod legacy;
 mod multiaddress;
 pub mod offchain;
@@ -65,6 +64,7 @@ mod runtime_string;
 pub mod testing;
 pub mod traits;
 pub mod transaction_validity;
+pub mod types;
 
 pub use crate::runtime_string::*;
 

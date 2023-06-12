@@ -20,7 +20,7 @@ use crate::Config;
 use frame_support::{
 	traits::{
 		fungibles::{Balanced, CreditOf, Inspect},
-		tokens::{Balance, AssetId, BalanceConversion},
+		tokens::{AssetId, Balance, BalanceConversion},
 	},
 	unsigned::TransactionValidityError,
 };
@@ -119,13 +119,17 @@ where
 		// less than one (e.g. 0.5) but gets rounded down by integer division we introduce a minimum
 		// fee.
 		// If system_token_asset_id is None, return invalid transaction
-		let system_token_asset_id = system_token_asset_id.ok_or(TransactionValidityError::from(InvalidTransaction::Payment))?;
+		let system_token_asset_id = system_token_asset_id
+			.ok_or(TransactionValidityError::from(InvalidTransaction::Payment))?;
 		let min_converted_fee = if fee.is_zero() { Zero::zero() } else { One::one() };
 		let converted_fee = CON::to_asset_balance(fee, system_token_asset_id)
 			.map_err(|_| TransactionValidityError::from(InvalidTransaction::Payment))?
 			.max(min_converted_fee);
-		let can_withdraw =
-			<T::Assets as Inspect<T::AccountId>>::can_withdraw(system_token_asset_id, who, converted_fee);
+		let can_withdraw = <T::Assets as Inspect<T::AccountId>>::can_withdraw(
+			system_token_asset_id,
+			who,
+			converted_fee,
+		);
 		if !matches!(can_withdraw, WithdrawConsequence::Success) {
 			return Err(InvalidTransaction::Payment.into())
 		}
