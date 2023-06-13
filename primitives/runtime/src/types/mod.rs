@@ -2,6 +2,6 @@ pub mod token;
 mod vote;
 
 pub use self::{
-	token::{SystemTokenId, AssetId, ParaId, PalletId, SystemTokenLocalAssetProvider},
+	token::{AssetId, PalletId, ParaId, SystemTokenId, SystemTokenLocalAssetProvider},
 	vote::{PotVote, PotVotes, PotVotesResult, VoteAccountId, VoteAssetId, VoteWeight},
 };

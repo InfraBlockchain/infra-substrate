@@ -36,7 +36,7 @@ pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::ConstU32,
-	types::{SystemTokenId, AssetId, ParaId, PalletId, VoteWeight},
+	types::{AssetId, PalletId, ParaId, SystemTokenId, VoteWeight},
 	BoundedVec, RuntimeDebug,
 };
 
@@ -230,7 +230,6 @@ pub mod pallet {
 }
 
 impl<T: Config> SystemTokenInterface for Pallet<T> {
-
 	fn is_system_token(system_token: SystemTokenId) -> bool {
 		if let Some(_) = <SystemTokenList<T>>::get(system_token) {
 			return true

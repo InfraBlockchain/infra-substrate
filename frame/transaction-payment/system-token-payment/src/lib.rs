@@ -44,7 +44,7 @@ use sp_runtime::{
 		Zero,
 	},
 	transaction_validity::{TransactionValidity, TransactionValidityError, ValidTransaction},
-	types::{SystemTokenId, VoteAccountId, VoteWeight, SystemTokenLocalAssetProvider},
+	types::{SystemTokenId, SystemTokenLocalAssetProvider, VoteAccountId, VoteWeight},
 	FixedPointOperand,
 };
 
@@ -123,9 +123,8 @@ pub mod pallet {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config 
-		+ pallet_transaction_payment::Config 
-		+ pallet_assets::Config	
+	pub trait Config:
+		frame_system::Config + pallet_transaction_payment::Config + pallet_assets::Config
 	{
 		/// The overarching event type.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;

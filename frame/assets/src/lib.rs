@@ -237,7 +237,12 @@ pub mod pallet {
 		type RemoveItemsLimit: Get<u32>;
 
 		/// Identifier for the class of asset.
-		type AssetId: Member + Parameter + Copy + MaybeSerializeDeserialize + MaxEncodedLen + IsType<sp_runtime::types::AssetId>;
+		type AssetId: Member
+			+ Parameter
+			+ Copy
+			+ MaybeSerializeDeserialize
+			+ MaxEncodedLen
+			+ IsType<sp_runtime::types::AssetId>;
 
 		/// Wrapper around `Self::AssetId` to use in dispatchable call signatures. Allows the use
 		/// of compact encoding in instances of the pallet, which will prevent breaking changes

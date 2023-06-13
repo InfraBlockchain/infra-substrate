@@ -949,7 +949,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 	}
 }
 
-impl<T: Config<I>, I: 'static> SystemTokenLocalAssetProvider for Pallet<T ,I> {
+impl<T: Config<I>, I: 'static> SystemTokenLocalAssetProvider for Pallet<T, I> {
 	fn token_list() -> Option<Vec<sp_runtime::types::AssetId>> {
 		let assets = <Self as Store>::Asset::iter_keys();
 		let mut res: Vec<sp_runtime::types::AssetId> = Default::default();
