@@ -118,9 +118,21 @@ where
 		// We don't know the precision of the underlying asset. Because the converted fee could be
 		// less than one (e.g. 0.5) but gets rounded down by integer division we introduce a minimum
 		// fee.
-		// If system_token_asset_id is None, return invalid transaction
-		let system_token_asset_id = system_token_asset_id
-			.ok_or(TransactionValidityError::from(InvalidTransaction::Payment))?;
+		
+		// If system token is specified, transaction fee will be used with this token.
+		// Otherwise, get all the system tokens on Runtime and find out the largest number of holding of the system token
+		// For example,
+		// Alice has [(iKRW, 10), (iUSD, 100)] => "iUSD" will be used as transaction fee if it can be spent
+		//
+		// Error
+		// 1. If there is no system token on Runtime
+		
+		let system_token_asset_id = if let Some(asset_id) = system_token_asset_id {
+			asset_id
+		} else {
+			let system_token_asset_list = T::Assets::token_list().ok_or(TransactionValidityError::from(InvalidTransaction::Payment))?;
+			pallet_assets::Pallet::<T>::get_most_account_balance(system_token_asset_list, who.clone()).into()
+		};
 		let min_converted_fee = if fee.is_zero() { Zero::zero() } else { One::one() };
 		let converted_fee = CON::to_asset_balance(fee, system_token_asset_id)
 			.map_err(|_| TransactionValidityError::from(InvalidTransaction::Payment))?

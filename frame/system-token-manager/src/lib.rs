@@ -36,14 +36,12 @@ pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::ConstU32,
-	types::{SystemTokenId, VoteAssetId, VoteWeight},
+	types::{SystemTokenId, AssetId, ParaId, PalletId, VoteWeight},
 	BoundedVec, RuntimeDebug,
 };
 
-pub type ParaAssetId = VoteAssetId;
-pub type RelayAssetId = VoteAssetId;
-pub type ParaId = u32;
-pub type PalletId = u32;
+pub type ParaAssetId = AssetId;
+pub type RelayAssetId = AssetId;
 pub type ExchangeRate = u32;
 
 /// Data structure for Wrapped system tokens
@@ -232,6 +230,7 @@ pub mod pallet {
 }
 
 impl<T: Config> SystemTokenInterface for Pallet<T> {
+
 	fn is_system_token(system_token: SystemTokenId) -> bool {
 		if let Some(_) = <SystemTokenList<T>>::get(system_token) {
 			return true

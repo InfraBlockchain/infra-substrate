@@ -44,7 +44,7 @@ use sp_runtime::{
 		Zero,
 	},
 	transaction_validity::{TransactionValidity, TransactionValidityError, ValidTransaction},
-	types::{SystemTokenId, VoteAccountId, VoteWeight},
+	types::{SystemTokenId, VoteAccountId, VoteWeight, SystemTokenLocalAssetProvider},
 	FixedPointOperand,
 };
 
@@ -123,11 +123,14 @@ pub mod pallet {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + pallet_transaction_payment::Config {
+	pub trait Config: frame_system::Config 
+		+ pallet_transaction_payment::Config 
+		+ pallet_assets::Config	
+	{
 		/// The overarching event type.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		/// The fungibles instance used to pay for transactions in assets.
-		type Assets: Balanced<Self::AccountId>;
+		type Assets: Balanced<Self::AccountId> + SystemTokenLocalAssetProvider;
 		/// The actual transaction charging logic that charges the fees.
 		type OnChargeSystemToken: OnChargeSystemToken<Self>;
 		/// The type that handles the voting info.

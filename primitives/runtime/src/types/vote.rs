@@ -125,9 +125,9 @@ mod tests {
 		let candidate: VoteAccountId = AccountId32::new([0u8; 32]);
 		let system_token_id = SystemTokenId::new(2000, 50, 99);
 		let vote_weight: VoteWeight = 1;
-		let mut pot_votes = new_pot_votes(system_token_id, candidate.clone(), vote_weight);
-		for i in 1..MAX_VOTE_NUM + 1 {
-			pot_votes.update_vote_weight(i, candidate.clone(), 1);
+		let mut pot_votes = new_pot_votes(system_token_id.clone(), candidate.clone(), vote_weight);
+		for _ in 1..MAX_VOTE_NUM + 1 {
+			pot_votes.update_vote_weight(system_token_id, candidate.clone(), 1);
 		}
 		assert_eq!(pot_votes.vote_count, MAX_VOTE_NUM);
 	}

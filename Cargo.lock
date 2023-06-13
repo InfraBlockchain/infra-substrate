@@ -5050,8 +5050,8 @@ dependencies = [
  "jsonrpsee",
  "node-template-runtime",
  "pallet-assets",
- "pallet-fee-payment-manager",
  "pallet-system-token-manager",
+ "pallet-system-token-payment",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc",
  "sc-basic-authorship",
@@ -5100,11 +5100,11 @@ dependencies = [
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
- "pallet-fee-payment-manager",
  "pallet-grandpa",
  "pallet-insecure-randomness-collective-flip",
  "pallet-sudo",
  "pallet-system-token-manager",
+ "pallet-system-token-payment",
  "pallet-template",
  "pallet-timestamp",
  "pallet-transaction-payment",
@@ -5921,28 +5921,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-fee-payment-manager"
-version = "0.1.0"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "pallet-assets",
- "pallet-authorship",
- "pallet-balances",
- "pallet-transaction-payment",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "serde_json",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
- "sp-storage",
-]
-
-[[package]]
 name = "pallet-glutton"
 version = "4.0.0-dev"
 dependencies = [
@@ -6722,6 +6700,28 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "pallet-system-token-payment"
+version = "0.1.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-assets",
+ "pallet-authorship",
+ "pallet-balances",
+ "pallet-transaction-payment",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "serde_json",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "sp-storage",
 ]
 
 [[package]]

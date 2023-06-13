@@ -7,8 +7,8 @@ use sp_std::prelude::*;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-type ParaId = u32;
-type PalletId = u32;
+pub type ParaId = u32;
+pub type PalletId = u32;
 pub type AssetId = u32;
 
 /// Data structure for Original system tokens
@@ -43,4 +43,8 @@ impl SystemTokenId {
 	pub fn new(para_id: u32, pallet_id: u32, asset_id: AssetId) -> Self {
 		Self { para_id, pallet_id, asset_id }
 	}
+}
+
+pub trait SystemTokenLocalAssetProvider {
+	fn token_list() -> Option<Vec<AssetId>>;
 }

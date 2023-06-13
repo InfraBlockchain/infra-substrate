@@ -934,17 +934,34 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
 	/// Returns most balance for the given asset id.
 	pub fn get_most_account_balance(
-		asset_ids: impl IntoIterator<Item = T::AssetId>,
+		asset_ids: impl IntoIterator<Item = sp_runtime::types::AssetId>,
 		account: T::AccountId,
-	) -> Option<(T::AssetId, T::Balance)> {
-		let mut most_balance: Option<(T::AssetId, T::Balance)> = None;
+	) -> sp_runtime::types::AssetId {
+		let mut most_balance: (sp_runtime::types::AssetId, T::Balance) = Default::default();
 		for asset_id in asset_ids {
-			if let Some(balance) = Self::maybe_balance(asset_id, account.clone()) {
-				if None == most_balance || (most_balance.unwrap().1 < balance) {
-					most_balance = Some((asset_id, balance));
+			if let Some(balance) = Self::maybe_balance(asset_id.into(), account.clone()) {
+				if most_balance.1 < balance {
+					most_balance = (asset_id, balance);
 				}
 			}
 		}
-		most_balance
+		most_balance.0
+	}
+}
+
+impl<T: Config<I>, I: 'static> SystemTokenLocalAssetProvider for Pallet<T ,I> {
+	fn token_list() -> Option<Vec<sp_runtime::types::AssetId>> {
+		let assets = <Self as Store>::Asset::iter_keys();
+		let mut res: Vec<sp_runtime::types::AssetId> = Default::default();
+		for asset in assets {
+			if let Some(details) = <Self as Store>::Asset::get(&asset) {
+				if details.is_sufficient {
+					res.push(asset.into())
+				}
+			} else {
+				continue
+			}
+		}
+		None
 	}
 }
