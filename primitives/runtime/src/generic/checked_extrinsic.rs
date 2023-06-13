@@ -29,7 +29,7 @@ use sp_std::vec::Vec;
 
 #[derive(PartialEq, Eq, Clone, sp_core::RuntimeDebug)]
 pub enum CheckedTxExtension<AccountId> {
-	FeePayer(AccountId)
+	FeePayer(AccountId),
 }
 
 /// Definition of something that the external world might want to say; its
@@ -81,16 +81,15 @@ where
 	) -> crate::ApplyExtrinsicResultWithInfo<PostDispatchInfoOf<Self::Call>> {
 		let (maybe_fee_payer, maybe_pre) = if let Some((mut id, extra)) = self.signed {
 			match self.maybe_extensions {
-				Some(extensions) => {
+				Some(extensions) =>
 					for ext in extensions {
 						match ext {
 							CheckedTxExtension::FeePayer(acc) => {
 								id = acc;
-							}
+							},
 						}
-					}
-				},
-				None => ()
+					},
+				None => (),
 			}
 			let pre = Extra::pre_dispatch(extra, &id, &self.function, info, len)?;
 			(Some(id), Some(pre))
