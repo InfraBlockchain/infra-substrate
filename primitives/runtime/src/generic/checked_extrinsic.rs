@@ -25,6 +25,12 @@ use crate::{
 	},
 	transaction_validity::{TransactionSource, TransactionValidity},
 };
+use sp_std::vec::Vec;
+
+#[derive(PartialEq, Eq, Clone, sp_core::RuntimeDebug)]
+pub enum CheckedTxExtension<AccountId> {
+	FeePayer(AccountId)
+}
 
 /// Definition of something that the external world might want to say; its
 /// existence implies that it has been checked and is good, particularly with
@@ -34,6 +40,8 @@ pub struct CheckedExtrinsic<AccountId, Call, Extra> {
 	/// Who this purports to be from and the number of extrinsics have come before
 	/// from the same signer, if anyone (note this is not a signature).
 	pub signed: Option<(AccountId, Extra)>,
+
+	pub maybe_extensions: Option<Vec<CheckedTxExtension<AccountId>>>,
 
 	/// The function that should be called.
 	pub function: Call,
@@ -71,7 +79,19 @@ where
 		info: &DispatchInfoOf<Self::Call>,
 		len: usize,
 	) -> crate::ApplyExtrinsicResultWithInfo<PostDispatchInfoOf<Self::Call>> {
-		let (maybe_who, maybe_pre) = if let Some((id, extra)) = self.signed {
+		let (maybe_fee_payer, maybe_pre) = if let Some((mut id, extra)) = self.signed {
+			match self.maybe_extensions {
+				Some(extensions) => {
+					for ext in extensions {
+						match ext {
+							CheckedTxExtension::FeePayer(acc) => {
+								id = acc;
+							}
+						}
+					}
+				},
+				None => ()
+			}
 			let pre = Extra::pre_dispatch(extra, &id, &self.function, info, len)?;
 			(Some(id), Some(pre))
 		} else {
@@ -79,7 +99,7 @@ where
 			U::pre_dispatch(&self.function)?;
 			(None, None)
 		};
-		let res = self.function.dispatch(RuntimeOrigin::from(maybe_who));
+		let res = self.function.dispatch(RuntimeOrigin::from(maybe_fee_payer));
 		let post_info = match res {
 			Ok(info) => info,
 			Err(err) => err.post_info,

@@ -30,7 +30,7 @@ mod unchecked_extrinsic;
 
 pub use self::{
 	block::{Block, BlockId, SignedBlock},
-	checked_extrinsic::CheckedExtrinsic,
+	checked_extrinsic::{CheckedExtrinsic, CheckedTxExtension},
 	digest::{Digest, DigestItem, DigestItemRef, OpaqueDigestItemId},
 	era::{Era, Phase},
 	header::Header,

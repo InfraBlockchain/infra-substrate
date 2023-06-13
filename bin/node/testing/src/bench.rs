@@ -301,6 +301,7 @@ impl<'a> Iterator for BlockContentIterator<'a> {
 					sender,
 					signed_extra(0, kitchensink_runtime::ExistentialDeposit::get() + 1),
 				)),
+				maybe_extensions: None,
 				function: match self.content.block_type {
 					BlockType::RandomTransfersKeepAlive =>
 						RuntimeCall::Balances(BalancesCall::transfer_keep_alive {
@@ -589,7 +590,7 @@ impl BenchKeyring {
 					}
 				});
 				UncheckedExtrinsic {
-					signature: Some((sp_runtime::MultiAddress::Id(signed), signature, extra)),
+					signature: Some((sp_runtime::MultiAddress::Id(signed), signature, extra, None)),
 					function: payload.0,
 				}
 			},

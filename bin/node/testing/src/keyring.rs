@@ -103,7 +103,7 @@ pub fn sign(
 				})
 				.into();
 			UncheckedExtrinsic {
-				signature: Some((sp_runtime::MultiAddress::Id(signed), signature, extra)),
+				signature: Some((sp_runtime::MultiAddress::Id(signed), signature, extra, None)),
 				function: payload.0,
 			}
 		},
