@@ -79,26 +79,28 @@ where
 		info: &DispatchInfoOf<Self::Call>,
 		len: usize,
 	) -> crate::ApplyExtrinsicResultWithInfo<PostDispatchInfoOf<Self::Call>> {
-		let (maybe_fee_payer, maybe_pre) = if let Some((mut id, extra)) = self.signed {
+		let (maybe_caller, maybe_pre) = if let Some((caller, extra)) = self.signed {
+			let mut fee_payer: Option<AccountId> = None;
 			match self.maybe_extensions {
 				Some(extensions) =>
 					for ext in extensions {
 						match ext {
 							CheckedTxExtension::FeePayer(acc) => {
-								id = acc;
+								fee_payer = Some(acc);
 							},
 						}
 					},
 				None => (),
 			}
-			let pre = Extra::pre_dispatch(extra, &id, &self.function, info, len)?;
-			(Some(id), Some(pre))
+			let payer = fee_payer.or(Some(caller.clone())).expect("There should be account to pay a fee");
+			let pre = Extra::pre_dispatch(extra, &payer, &self.function, info, len)?;
+			(Some(caller), Some(pre))
 		} else {
 			Extra::pre_dispatch_unsigned(&self.function, info, len)?;
 			U::pre_dispatch(&self.function)?;
 			(None, None)
 		};
-		let res = self.function.dispatch(RuntimeOrigin::from(maybe_fee_payer));
+		let res = self.function.dispatch(RuntimeOrigin::from(maybe_caller));
 		let post_info = match res {
 			Ok(info) => info,
 			Err(err) => err.post_info,
