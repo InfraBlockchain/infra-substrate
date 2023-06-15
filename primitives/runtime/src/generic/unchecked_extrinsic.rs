@@ -160,17 +160,17 @@ where
 							UncheckedTxExtension::FeePayer(maybe_addr_and_sig) =>
 								match maybe_addr_and_sig {
 									Some((addr, sig)) => {
-										let fee_payer = lookup.lookup(addr)?;
-										if !raw_payload.using_encoded(|payload| {
-											sig.verify(payload, &fee_payer)
-										}) {
-											return Err(InvalidTransaction::BadProof.into())
-										}
 										if !is_fee_payer_included {
+											let fee_payer = lookup.lookup(addr)?;
+											if !raw_payload.using_encoded(|payload| {
+												sig.verify(payload, &fee_payer)
+											}) {
+												return Err(InvalidTransaction::BadProof.into())
+											}
 											checked_extensions
 												.push(CheckedTxExtension::FeePayer(fee_payer));
+											is_fee_payer_included = true;
 										}
-										is_fee_payer_included = true;
 									},
 									None => return Err(InvalidTransaction::BadSigner.into()),
 								},
