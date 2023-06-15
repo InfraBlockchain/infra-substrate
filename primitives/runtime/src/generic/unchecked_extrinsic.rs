@@ -37,6 +37,7 @@ use sp_std::{fmt, prelude::*};
 /// It ensures that if the representation is changed and the format is not known,
 /// the decoding fails.
 const EXTRINSIC_FORMAT_VERSION: u8 = 4;
+const MAX_UNCHECKED_EXTENSION: u8 = 10;
 
 #[derive(PartialEq, Eq, Clone, sp_core::RuntimeDebug, Encode, Decode)]
 pub enum UncheckedTxExtension<Address, Signature> {
@@ -155,6 +156,9 @@ where
 				let mut is_fee_payer_included = false;
 				let raw_payload = SignedPayload::new(self.function, extra)?;
 				if let Some(unchecked_extensions) = maybe_unchecked_extensions {
+					if unchecked_extensions.len() as u8 > MAX_UNCHECKED_EXTENSION {
+						return Err(InvalidTransaction::Call.into());
+					}
 					for ext in unchecked_extensions {
 						match ext {
 							UncheckedTxExtension::FeePayer(maybe_addr_and_sig) =>
