@@ -962,6 +962,11 @@ impl<T: Config<I>, I: 'static> SystemTokenLocalAssetProvider for Pallet<T, I> {
 				continue
 			}
 		}
-		None
+
+		if res.len() > 0 {
+			Some(res)
+		} else {
+			None
+		}
 	}
 }
