@@ -13,7 +13,7 @@ use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
-		AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, NumberFor, One, Verify,
+		AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, NumberFor, One, Verify, ConvertInto
 	},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, MultiSignature,
@@ -45,6 +45,7 @@ pub use pallet_balances::Call as BalancesCall;
 // use pallet_infra_asset_tx_payment::{FungiblesAdapter, HandleCredit};
 pub use pallet_timestamp::Call as TimestampCall;
 use pallet_transaction_payment::{ConstFeeMultiplier, CurrencyAdapter, Multiplier};
+use pallet_system_token_payment::{TransactionFeeCharger, HandleCredit, CreditToBucket};
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
@@ -154,7 +155,7 @@ parameter_types! {
 }
 
 // Configure FRAME pallets to include in runtime.
-impl pallet_system_token_manager::Config for Runtime {
+impl pallet_system_token::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type StringLimit = ConstU32<50>;
 	type MaxWrappedSystemToken = ConstU32<10>;
@@ -277,6 +278,22 @@ impl pallet_transaction_payment::Config for Runtime {
 	type LengthToFee = IdentityFee<Balance>;
 	type FeeMultiplierUpdate = ConstFeeMultiplier<FeeMultiplier>;
 }
+
+parameter_types! {
+	pub const TxPaymentPalletId: PalletId = PalletId(*b"infrapid");
+}
+
+impl pallet_system_token_payment::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Assets = Assets;
+	type OnChargeSystemToken = TransactionFeeCharger<
+		pallet_assets::BalanceToAssetBalance<Balances, Runtime, ConvertInto>,
+		CreditToBucket<Runtime>,
+	>;
+	type PalletId = TxPaymentPalletId;
+	type VotingHandler = TemplateModule;
+}
+
 type AssetId = u32;
 impl pallet_assets::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
@@ -298,31 +315,6 @@ impl pallet_assets::Config for Runtime {
 	type WeightInfo = ();
 	type RemoveItemsLimit = ConstU32<1000>;
 }
-
-// pub struct CreditToBucket;
-// impl HandleCredit<AccountId, Assets> for CreditToBucket {
-// 	fn handle_credit(credit: CreditOf<AccountId, Assets>) {
-// 		let dest = pallet_infra_asset_tx_payment::Pallet::<Runtime>::account_id();
-// 		let _ = <Assets as Balanced<AccountId>>::resolve(&dest, credit);
-// 	}
-// }
-
-// parameter_types! {
-// 	pub const PalletPalletId: PalletId = PalletId(*b"infrapid");
-// }
-
-// impl pallet_infra_asset_tx_payment::Config for Runtime {
-// 	type RuntimeEvent = RuntimeEvent;
-// 	type Fungibles = Assets;
-// 	/// The actual transaction charging logic that charges the fees.
-// 	type OnChargeAssetTransaction = FungiblesAdapter<
-// 		pallet_assets::BalanceToAssetBalance<Balances, Runtime, ConvertInto>,
-// 		CreditToBucket,
-// 	>;
-// 	/// The type that handles the voting info.
-// 	type VoteInfoHandler = TemplateModule;
-// 	type PalletId = PalletPalletId;
-// }
 
 impl pallet_sudo::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
@@ -356,10 +348,9 @@ construct_runtime!(
 		Assets: pallet_assets,
 		Authorship: pallet_authorship,
 		TransactionPayment: pallet_transaction_payment,
-		// InfraAssetTxPayment: pallet_infra_asset_tx_payment,
-		SystemTokenManager: pallet_system_token_manager,
+		SystemTokenPayment: pallet_system_token_payment,
+		SystemToken: pallet_system_token,
 		Sudo: pallet_sudo,
-		// Include the custom logic from the pallet-template in the runtime.
 		TemplateModule: pallet_template,
 	}
 );
@@ -379,8 +370,7 @@ pub type SignedExtra = (
 	frame_system::CheckEra<Runtime>,
 	frame_system::CheckNonce<Runtime>,
 	frame_system::CheckWeight<Runtime>,
-	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
-	// pallet_infra_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
+	pallet_system_token_payment::ChargeSystemToken<Runtime>
 );
 
 /// Unchecked extrinsic type as expected by this runtime.

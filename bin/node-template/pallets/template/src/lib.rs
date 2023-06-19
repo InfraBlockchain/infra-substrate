@@ -6,18 +6,8 @@
 pub use pallet::*;
 
 use frame_support::traits::pot::VotingHandler;
-use sp_runtime::types::{SystemTokenId, VoteAccountId, VoteAssetId, VoteWeight};
-
-pub type AccountnAssetId<AccountId, VoteAssetId> = (AccountId, VoteAssetId);
-
-#[cfg(test)]
-mod mock;
-
-#[cfg(test)]
-mod tests;
-
-#[cfg(feature = "runtime-benchmarks")]
-mod benchmarking;
+use sp_runtime::types::{SystemTokenId, VoteAccountId, VoteWeight, PotVote};
+use sp_std::vec::Vec;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -34,22 +24,18 @@ pub mod pallet {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 	}
 
-	// The pallet's runtime storage items.
-	// https://docs.substrate.io/main-docs/build/runtime-storage/
 	#[pallet::storage]
 	#[pallet::unbounded]
 	#[pallet::getter(fn vote_info)]
-	pub type PotVotes<T: Config> = StorageMap<
+	pub type PotVotes<T: Config> = StorageValue<
 		_,
-		Twox64Concat,
-		AccountnAssetId<VoteAccountId, SystemTokenId>,
-		VoteWeight,
+		Vec<PotVote>,
 		OptionQuery,
 	>;
 
 	#[pallet::event]
 	pub enum Event<T: Config> {
-		VoteCollected { who: T::AccountId, asset_id: VoteAssetId, vote_weight: VoteWeight },
+		VoteCollected { who: T::AccountId, system_token_id: SystemTokenId, vote_weight: VoteWeight },
 	}
 
 	#[pallet::error]
@@ -64,22 +50,19 @@ impl<T: Config> VotingHandler for Pallet<T> {
 		system_token_id: SystemTokenId,
 		vote_weight: VoteWeight,
 	) {
-		// each vote_info is stored to VoteInfo StorageMap like: {key: (AccountId, VoteAssetId),
-		// value: VoteWeight }
-		let key = (who, system_token_id);
-		Self::do_update_pot_vote(key, vote_weight);
+		let pot_vote = PotVote::new(system_token_id, who, vote_weight);
+		Self::do_update_pot_vote(pot_vote);
 	}
 }
 
 impl<T: Config> Pallet<T> {
-	fn do_update_pot_vote(key: (VoteAccountId, SystemTokenId), vote_weight: VoteWeight) {
-		if let Some(old_weight) = PotVotes::<T>::get(&key) {
-			// Weight for asset id already existed
-			let new_weight = old_weight.saturating_add(vote_weight);
-			PotVotes::<T>::insert(&key, new_weight);
+	fn do_update_pot_vote(pot_vote: PotVote) {
+		if let Some(mut old_pot) = PotVotes::<T>::get() {
+			old_pot.push(pot_vote);
+			PotVotes::<T>::put(old_pot);
 		} else {
 			// Weight for the asset id not existed. Need to insert new one
-			PotVotes::<T>::insert(&key, vote_weight);
+			PotVotes::<T>::put([pot_vote].to_vec());
 		}
 	}
 }

@@ -16,9 +16,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 codec = { package = "parity-scale-codec", version = "3.2.2", default-features = false, features = [
 	"derive",
 ] }
-
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
-pallet-system-token-manager = { version = "4.0.0-dev", default-features = false, path = "../../../frame/system-token-manager" }
 pallet-aura = { version = "4.0.0-dev", default-features = false, path = "../../../frame/aura" }
 pallet-balances = { version = "4.0.0-dev", default-features = false, path = "../../../frame/balances" }
 pallet-assets = { version = "4.0.0-dev", default-features = false, path = "../../../frame/assets" }
@@ -30,7 +28,6 @@ frame-system = { version = "4.0.0-dev", default-features = false, path = "../../
 frame-try-runtime = { version = "0.10.0-dev", default-features = false, path = "../../../frame/try-runtime", optional = true }
 pallet-timestamp = { version = "4.0.0-dev", default-features = false, path = "../../../frame/timestamp" }
 pallet-transaction-payment = { version = "4.0.0-dev", default-features = false, path = "../../../frame/transaction-payment" }
-pallet-system-token-payment = { version = "0.1.0", default-features = false, path = "../../../frame/transaction-payment/system-token-payment/" }
 pallet-authorship = { version = "4.0.0-dev", default-features = false, path = "../../../frame/authorship" }
 frame-executive = { version = "4.0.0-dev", default-features = false, path = "../../../frame/executive" }
 sp-api = { version = "4.0.0-dev", default-features = false, path = "../../../primitives/api" }
@@ -45,6 +42,11 @@ sp-session = { version = "4.0.0-dev", default-features = false, path = "../../..
 sp-std = { version = "5.0.0", default-features = false, path = "../../../primitives/std" }
 sp-transaction-pool = { version = "4.0.0-dev", default-features = false, path = "../../../primitives/transaction-pool" }
 sp-version = { version = "5.0.0", default-features = false, path = "../../../primitives/version" }
+
+# InfraBlockchain related
+pallet-system-token = { version = "0.1.0", default-features = false, path = "../../../frame/system-token" }
+pallet-system-token-payment = { version = "0.1.0", default-features = false, path = "../../../frame/transaction-payment/system-token-payment/" }
+
 
 # Used for the node template's RPCs
 frame-system-rpc-runtime-api = { version = "4.0.0-dev", default-features = false, path = "../../../frame/system/rpc/runtime-api/" }

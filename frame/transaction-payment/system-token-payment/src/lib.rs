@@ -170,7 +170,7 @@ pub mod pallet {
 /// An asset id of `None` falls back to the underlying transaction payment via the native currency.
 #[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo)]
 #[scale_info(skip_type_params(T))]
-pub struct FeePaymentMetadata<T: Config> {
+pub struct ChargeSystemToken<T: Config> {
 	// tip to be added for the block author
 	#[codec(compact)]
 	tip: BalanceOf<T>,
@@ -180,7 +180,7 @@ pub struct FeePaymentMetadata<T: Config> {
 	vote_candidate: Option<VoteAccountId>,
 }
 
-impl<T: Config> FeePaymentMetadata<T>
+impl<T: Config> ChargeSystemToken<T>
 where
 	T::RuntimeCall: Dispatchable<Info = DispatchInfo, PostInfo = PostDispatchInfo>,
 	AssetBalanceOf<T>: Send + Sync + FixedPointOperand,
@@ -251,10 +251,10 @@ where
 	}
 }
 
-impl<T: Config> sp_std::fmt::Debug for FeePaymentMetadata<T> {
+impl<T: Config> sp_std::fmt::Debug for ChargeSystemToken<T> {
 	#[cfg(feature = "std")]
 	fn fmt(&self, f: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
-		write!(f, "FeePaymentMetadata<{:?}, {:?}>", self.tip, self.system_token_id.encode())
+		write!(f, "ChargeSystemToken<{:?}, {:?}>", self.tip, self.system_token_id.encode())
 	}
 	#[cfg(not(feature = "std"))]
 	fn fmt(&self, _: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
@@ -262,7 +262,7 @@ impl<T: Config> sp_std::fmt::Debug for FeePaymentMetadata<T> {
 	}
 }
 
-impl<T: Config> SignedExtension for FeePaymentMetadata<T>
+impl<T: Config> SignedExtension for ChargeSystemToken<T>
 where
 	T::RuntimeCall: Dispatchable<Info = DispatchInfo, PostInfo = PostDispatchInfo>,
 	AssetBalanceOf<T>: Send + Sync + FixedPointOperand + IsType<VoteWeight>,
@@ -270,7 +270,7 @@ where
 	ChargeSystemTokenAssetIdOf<T>: Send + Sync,
 	CreditOf<T::AccountId, T::Assets>: IsType<ChargeAssetLiquidityOf<T>>,
 {
-	const IDENTIFIER: &'static str = "FeePaymentMetadata";
+	const IDENTIFIER: &'static str = "ChargeSystemToken";
 	type AccountId = T::AccountId;
 	type Call = T::RuntimeCall;
 	type AdditionalSigned = ();
@@ -398,5 +398,13 @@ where
 		}
 
 		Ok(())
+	}
+}
+
+pub struct CreditToBucket<T>(PhantomData<T>);
+impl<T: Config> HandleCredit<T::AccountId, T::Assets> for CreditToBucket<T> {
+	fn handle_credit(credit: CreditOf<T::AccountId, T::Assets>) {
+		let dest = T::PalletId::get().into_account_truncating();
+		let _ = <T::Assets as Balanced<T::AccountId>>::resolve(&dest, credit);
 	}
 }

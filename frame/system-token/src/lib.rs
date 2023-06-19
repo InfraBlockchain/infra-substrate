@@ -15,19 +15,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! # Tokem manager Pallet
+//! # System Token Pallet
 //!
 //! - [`Config`]
 //! - [`Call`]
 //!
 //! ## Overview
 //!
-//! Token manager handles all infomration related with system tokens on the relay chain level.
+//! System Token manager handles all infomration related with system tokens on the relay chain level.
 //!
 //! ### Functions
 //!
-//! * `set_name` - Set the associated name of an account; a small deposit is reserved if not already
-//!   taken.
+//! * 
+//! 	`register_system_token` - Register system token that has set to be sufficient by the Governance
+//! 
+//! 	`remove_system_token` - Remove system token registered on Runtime
 //! *
 
 #![cfg_attr(not(feature = "std"), no_std)]
