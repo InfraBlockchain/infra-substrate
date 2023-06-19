@@ -524,6 +524,8 @@ pub mod pallet {
 		AssetMinBalanceChanged { asset_id: T::AssetId, new_min_balance: T::Balance },
 		/// The is_sufficient of an asset has been updated by the asset owner.
 		AssetIsSufficientChanged { asset_id: T::AssetId, new_is_sufficient: bool },
+		/// No sufficient token to pay the transaciton fee
+		NoSufficientTokenToPay,
 	}
 
 	#[pallet::error]
