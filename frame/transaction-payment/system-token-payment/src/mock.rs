@@ -190,33 +190,8 @@ impl pallet_authorship::Config for Runtime {
 	type EventHandler = ();
 }
 
-pub(crate) const FEE_BUCKET_ADDRESS: AccountId = 1234;
-pub struct CreditToBucket;
-impl HandleCredit<AccountId, Assets> for CreditToBucket {
-	fn handle_credit(credit: CreditOf<AccountId, Assets>) {
-		let dest = FEE_BUCKET_ADDRESS;
-		let _ = <Assets as Balanced<AccountId>>::resolve(&dest, credit);
-	}
-}
-
 parameter_types! {
-	pub const PalletPalletId: PalletId = PalletId(*b"infrapid");
-}
-
-pub struct MockVoteInfo {
-	pub who: AccountId,
-	pub sytem_token_id: SystemTokenId,
-	pub vote_weight: VoteWeight,
-}
-
-impl VotingHandler for MockVoteInfo {
-	fn update_pot_vote(
-		_who: VoteAccountId,
-		_sytem_token_id: SystemTokenId,
-		_vote_weight: VoteWeight,
-	) {
-		// this dummy body should be replaced to work fine
-	}
+	pub const TxPaymentPalletId: PalletId = PalletId(*b"infrapid");
 }
 
 impl Config for Runtime {
@@ -224,8 +199,8 @@ impl Config for Runtime {
 	type Assets = Assets;
 	type OnChargeSystemToken = TransactionFeeCharger<
 		pallet_assets::BalanceToAssetBalance<Balances, Runtime, ConvertInto>,
-		CreditToBucket,
+		CreditToBucket<Runtime>,
 	>;
-	type VotingHandler = MockVoteInfo;
-	type PalletId = PalletPalletId;
+	type VotingHandler = ();
+	type PalletId = TxPaymentPalletId;
 }

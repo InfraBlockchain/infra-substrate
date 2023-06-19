@@ -139,7 +139,7 @@ fn transaction_payment_in_asset_possible() {
 			// existential deposit
 			let fee = (base_weight + weight + len as u64) * min_balance / ExistentialDeposit::get();
 
-			let pre = FeePaymentMetadata::<Runtime>::from(0, Some(asset_id), None)
+			let pre = ChargeSystemToken::<Runtime>::from(0, Some(asset_id), None)
 				.pre_dispatch(&caller, CALL, &info_from_weight(Weight::from_parts(weight, 0)), len)
 				.unwrap();
 
@@ -147,9 +147,9 @@ fn transaction_payment_in_asset_possible() {
 			assert_eq!(Balances::free_balance(caller), 10 * balance_factor);
 			// check that fee was charged in the given asset
 			assert_eq!(Assets::balance(asset_id, caller), balance - fee);
-			assert_eq!(Assets::balance(asset_id, FEE_BUCKET_ADDRESS), 0);
+			assert_eq!(Assets::balance(asset_id, Pallet::account_id()), 0);
 
-			assert_ok!(FeePaymentMetadata::<Runtime>::post_dispatch(
+			assert_ok!(ChargeSystemToken::<Runtime>::post_dispatch(
 				Some(pre),
 				&info_from_weight(Weight::from_parts(weight, 0)),
 				&default_post_info(),
@@ -158,6 +158,6 @@ fn transaction_payment_in_asset_possible() {
 			));
 			assert_eq!(Assets::balance(asset_id, caller), balance - fee);
 			// check that the block author gets rewarded
-			assert_eq!(Assets::balance(asset_id, FEE_BUCKET_ADDRESS), fee);
+			assert_eq!(Assets::balance(asset_id, Pallet::account_id()), fee);
 		});
 }

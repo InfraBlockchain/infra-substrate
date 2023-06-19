@@ -6,7 +6,7 @@ use frame_support::{
 use sp_core::{ByteArray, H256};
 use sp_keyring::Sr25519Keyring::*;
 use sp_runtime::{
-	generic::{VoteAccountId, VoteWeight},
+	types::{VoteAccountId, VoteWeight},
 	testing::Header,
 	traits::{BlakeTwo256, Convert, IdentityLookup},
 	AccountId32,

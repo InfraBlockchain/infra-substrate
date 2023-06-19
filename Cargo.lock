@@ -5113,7 +5113,7 @@ dependencies = [
  "jsonrpsee",
  "node-template-runtime",
  "pallet-assets",
- "pallet-system-token-manager",
+ "pallet-system-token",
  "pallet-system-token-payment",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc",
@@ -5166,7 +5166,7 @@ dependencies = [
  "pallet-grandpa",
  "pallet-insecure-randomness-collective-flip",
  "pallet-sudo",
- "pallet-system-token-manager",
+ "pallet-system-token",
  "pallet-system-token-payment",
  "pallet-template",
  "pallet-timestamp",
@@ -6751,8 +6751,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-system-token-manager"
-version = "4.0.0-dev"
+name = "pallet-system-token"
+version = "0.1.0"
 dependencies = [
  "frame-support",
  "frame-system",
