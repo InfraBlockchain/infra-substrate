@@ -952,21 +952,21 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 impl<T: Config<I>, I: 'static> SystemTokenLocalAssetProvider for Pallet<T, I> {
 	fn token_list() -> Option<Vec<sp_runtime::types::AssetId>> {
 		let assets = <Self as Store>::Asset::iter_keys();
-		let mut res: Vec<sp_runtime::types::AssetId> = Default::default();
-		for asset in assets {
-			if let Some(details) = <Self as Store>::Asset::get(&asset) {
-				if details.is_sufficient {
-					res.push(asset.into())
-				}
-			} else {
-				continue
-			}
-		}
-
-		if res.len() > 0 {
-			Some(res)
-		} else {
+		let token_list = assets
+			.into_iter()
+			.filter_map(|asset| {
+				<Self as Store>::Asset::get(&asset)
+					.filter(|detail| detail.is_sufficient)
+					.map(|_| asset.into())
+			})
+			.collect::<Vec<sp_runtime::types::AssetId>>();
+		if token_list.is_empty() {
+			Self::deposit_event(
+				Event::<T, I>::NoSufficientTokenToPay
+			);
 			None
+		} else {
+			Some(token_list)
 		}
 	}
 }
