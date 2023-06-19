@@ -22,13 +22,14 @@
 //!
 //! ## Overview
 //!
-//! System Token manager handles all infomration related with system tokens on the relay chain level.
+//! System Token manager handles all infomration related with system tokens on the relay chain
+//! level.
 //!
 //! ### Functions
 //!
-//! * 
+//! *
 //! 	`register_system_token` - Register system token that has set to be sufficient by the Governance
-//! 
+//!
 //! 	`remove_system_token` - Remove system token registered on Runtime
 //! *
 
