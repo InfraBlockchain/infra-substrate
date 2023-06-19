@@ -961,9 +961,7 @@ impl<T: Config<I>, I: 'static> SystemTokenLocalAssetProvider for Pallet<T, I> {
 			})
 			.collect::<Vec<sp_runtime::types::AssetId>>();
 		if token_list.is_empty() {
-			Self::deposit_event(
-				Event::<T, I>::NoSufficientTokenToPay
-			);
+			Self::deposit_event(Event::<T, I>::NoSufficientTokenToPay);
 			None
 		} else {
 			Some(token_list)

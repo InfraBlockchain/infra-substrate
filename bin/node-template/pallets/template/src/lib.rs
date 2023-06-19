@@ -6,7 +6,7 @@
 pub use pallet::*;
 
 use frame_support::traits::pot::VotingHandler;
-use sp_runtime::types::{SystemTokenId, VoteAccountId, VoteWeight, PotVote};
+use sp_runtime::types::{PotVote, SystemTokenId, VoteAccountId, VoteWeight};
 use sp_std::vec::Vec;
 
 #[frame_support::pallet]
@@ -27,11 +27,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::unbounded]
 	#[pallet::getter(fn vote_info)]
-	pub type PotVotes<T: Config> = StorageValue<
-		_,
-		Vec<PotVote>,
-		OptionQuery,
-	>;
+	pub type PotVotes<T: Config> = StorageValue<_, Vec<PotVote>, OptionQuery>;
 
 	#[pallet::event]
 	pub enum Event<T: Config> {
