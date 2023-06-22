@@ -1,5 +1,16 @@
 use crate::*;
 
+pub trait SessionAlert<BlockNumber> {
+	/// Whether new session has triggered
+	fn is_new_session(n: BlockNumber) -> bool;
+}
+
+impl<T: Config> SessionAlert<T::BlockNumber> for Pallet<T> {
+	fn is_new_session(n: T::BlockNumber) -> bool {
+		true
+	}
+}
+
 /// Something that handles fee reward
 pub trait RewardInterface {
 	/// Fee will be aggregated on certain account for current session
