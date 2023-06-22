@@ -92,6 +92,7 @@ parameter_types! {
 	pub const MotionDuration: u64 = 3;
 	pub const MaxProposals: u32 = 257;
 }
+
 impl frame_system::Config for Test {
 	type BaseCallFilter = frame_support::traits::Everything;
 	type BlockWeights = ();
@@ -118,8 +119,17 @@ impl frame_system::Config for Test {
 	type OnSetCode = ();
 	type MaxConsumers = ConstU32<16>;
 }
+
+parameter_types! {
+	pub const ValidatorCollective: bool = true;
+	pub const NotValidatorCollective: bool = false;
+}
+
 impl Config<Instance1> for Test {
 	type RuntimeOrigin = RuntimeOrigin;
+	type IsValidatorCollective = ValidatorCollective;
+	type SessionInterface = ();
+	type SessionAlert = ();
 	type Proposal = RuntimeCall;
 	type RuntimeEvent = RuntimeEvent;
 	type MotionDuration = ConstU64<3>;
@@ -129,8 +139,12 @@ impl Config<Instance1> for Test {
 	type WeightInfo = ();
 	type SetMembersOrigin = EnsureRoot<Self::AccountId>;
 }
+
 impl Config<Instance2> for Test {
 	type RuntimeOrigin = RuntimeOrigin;
+	type IsValidatorCollective = NotValidatorCollective;
+	type SessionInterface = ();
+	type SessionAlert = ();
 	type Proposal = RuntimeCall;
 	type RuntimeEvent = RuntimeEvent;
 	type MotionDuration = ConstU64<3>;
@@ -146,6 +160,9 @@ impl mock_democracy::Config for Test {
 }
 impl Config for Test {
 	type RuntimeOrigin = RuntimeOrigin;
+	type IsValidatorCollective = NotValidatorCollective;
+	type SessionInterface = ();
+	type SessionAlert = ();
 	type Proposal = RuntimeCall;
 	type RuntimeEvent = RuntimeEvent;
 	type MotionDuration = ConstU64<3>;

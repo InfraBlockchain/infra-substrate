@@ -146,6 +146,12 @@ pub trait ShouldEndSession<BlockNumber> {
 	fn should_end_session(now: BlockNumber) -> bool;
 }
 
+impl<BlockNumber> ShouldEndSession<BlockNumber> for () {
+	fn should_end_session(_now: BlockNumber) -> bool {
+		false
+	}
+}
+
 /// Ends the session after a fixed period of blocks.
 ///
 /// The first session will have length of `Offset`, and

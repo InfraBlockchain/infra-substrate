@@ -57,8 +57,11 @@ use frame_support::{
 	traits::{
 		Backing, ChangeMembers, EnsureOrigin, Get, GetBacking, InitializeMembers, StorageVersion,
 	},
-	weights::{OldWeight, Weight},
+	weights::Weight,
 };
+
+use pallet_validator_election::SessionInterface;
+use pallet_session::ShouldEndSession;
 
 #[cfg(test)]
 mod tests;
@@ -168,11 +171,11 @@ pub struct Votes<AccountId, BlockNumber> {
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::pallet_prelude::*;
+	use frame_support::{pallet_prelude::*, traits::Hooks};
 	use frame_system::pallet_prelude::*;
 
 	/// The current storage version.
-	const STORAGE_VERSION: StorageVersion = StorageVersion::new(4);
+	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -184,6 +187,15 @@ pub mod pallet {
 	pub trait Config<I: 'static = ()>: frame_system::Config {
 		/// The runtime origin type.
 		type RuntimeOrigin: From<RawOrigin<Self::AccountId, I>>;
+
+		/// Pallet instance type
+		type IsValidatorCollective: Get<bool>;
+
+		/// Session interacting type
+		type SessionInterface: SessionInterface<Self::AccountId>;
+
+		/// Session alert type
+		type SessionAlert: ShouldEndSession<Self::BlockNumber>;
 
 		/// The runtime call dispatch type.
 		type Proposal: Parameter
@@ -248,6 +260,29 @@ pub mod pallet {
 		}
 	}
 
+	#[pallet::hooks]
+	impl<T: Config<I>, I: 'static> Hooks<BlockNumberFor<T>> for Pallet<T, I> {
+		fn on_initialize(n: T::BlockNumber) -> Weight {
+			// Anything that needs to be done at the start of the block.
+			//
+			// **Warning**
+			// `T::SessionAlert` `T::SessionInterface` should be above the Pallet
+			// 
+			// Condition check
+			// 1. If session ends
+			// 2. If it is validator collective pallet
+			// Collective members should change to new session validator set
+			if T::SessionAlert::should_end_session(n) && T::IsValidatorCollective::get() {
+				
+				let validators = T::SessionInterface::validators();
+				Self::set_new_members(validators);
+				T::DbWeight::get().reads_writes(2, 1)
+			} else {
+				Weight::zero()
+			}
+		}
+	}
+
 	/// Origin for the collective pallet.
 	#[pallet::origin]
 	pub type Origin<T, I = ()> = RawOrigin<<T as frame_system::Config>::AccountId, I>;
@@ -289,6 +324,12 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config<I>, I: 'static = ()> {
+
+		/// Collective members have been changed due to new Session
+		MembersChanged {
+			old: Vec<T::AccountId>,
+			new: Vec<T::AccountId>,
+		},
 		/// A motion (given hash) has been proposed (by given account) with a threshold (given
 		/// `MemberCount`).
 		Proposed {
@@ -345,76 +386,6 @@ pub mod pallet {
 	// Note that councillor operations are assigned to the operational class.
 	#[pallet::call]
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
-		/// Set the collective's membership.
-		///
-		/// - `new_members`: The new member list. Be nice to the chain and provide it sorted.
-		/// - `prime`: The prime member whose vote sets the default.
-		/// - `old_count`: The upper bound for the previous number of members in storage. Used for
-		///   weight estimation.
-		///
-		/// The dispatch of this call must be `SetMembersOrigin`.
-		///
-		/// NOTE: Does not enforce the expected `MaxMembers` limit on the amount of members, but
-		///       the weight estimations rely on it to estimate dispatchable weight.
-		///
-		/// # WARNING:
-		///
-		/// The `pallet-collective` can also be managed by logic outside of the pallet through the
-		/// implementation of the trait [`ChangeMembers`].
-		/// Any call to `set_members` must be careful that the member set doesn't get out of sync
-		/// with other logic managing the member set.
-		///
-		/// ## Complexity:
-		/// - `O(MP + N)` where:
-		///   - `M` old-members-count (code- and governance-bounded)
-		///   - `N` new-members-count (code- and governance-bounded)
-		///   - `P` proposals-count (code-bounded)
-		#[pallet::call_index(0)]
-		#[pallet::weight((
-			T::WeightInfo::set_members(
-				*old_count, // M
-				new_members.len() as u32, // N
-				T::MaxProposals::get() // P
-			),
-			DispatchClass::Operational
-		))]
-		pub fn set_members(
-			origin: OriginFor<T>,
-			new_members: Vec<T::AccountId>,
-			prime: Option<T::AccountId>,
-			old_count: MemberCount,
-		) -> DispatchResultWithPostInfo {
-			T::SetMembersOrigin::ensure_origin(origin)?;
-			if new_members.len() > T::MaxMembers::get() as usize {
-				log::error!(
-					target: LOG_TARGET,
-					"New members count ({}) exceeds maximum amount of members expected ({}).",
-					new_members.len(),
-					T::MaxMembers::get(),
-				);
-			}
-
-			let old = Members::<T, I>::get();
-			if old.len() > old_count as usize {
-				log::warn!(
-					target: LOG_TARGET,
-					"Wrong count used to estimate set_members weight. expected ({}) vs actual ({})",
-					old_count,
-					old.len(),
-				);
-			}
-			let mut new_members = new_members;
-			new_members.sort();
-			<Self as ChangeMembers<T::AccountId>>::set_members_sorted(&new_members, &old);
-			Prime::<T, I>::set(prime);
-
-			Ok(Some(T::WeightInfo::set_members(
-				old.len() as u32,         // M
-				new_members.len() as u32, // N
-				T::MaxProposals::get(),   // P
-			))
-			.into())
-		}
 
 		/// Dispatch a proposal from a member using the `Member` origin.
 		///
@@ -556,60 +527,6 @@ pub mod pallet {
 			} else {
 				Ok((Some(T::WeightInfo::vote(members.len() as u32)), Pays::Yes).into())
 			}
-		}
-
-		/// Close a vote that is either approved, disapproved or whose voting period has ended.
-		///
-		/// May be called by any signed account in order to finish voting and close the proposal.
-		///
-		/// If called before the end of the voting period it will only close the vote if it is
-		/// has enough votes to be approved or disapproved.
-		///
-		/// If called after the end of the voting period abstentions are counted as rejections
-		/// unless there is a prime member set and the prime member cast an approval.
-		///
-		/// If the close operation completes successfully with disapproval, the transaction fee will
-		/// be waived. Otherwise execution of the approved operation will be charged to the caller.
-		///
-		/// + `proposal_weight_bound`: The maximum amount of weight consumed by executing the closed
-		/// proposal.
-		/// + `length_bound`: The upper bound for the length of the proposal in storage. Checked via
-		/// `storage::read` so it is `size_of::<u32>() == 4` larger than the pure length.
-		///
-		/// ## Complexity
-		/// - `O(B + M + P1 + P2)` where:
-		///   - `B` is `proposal` size in bytes (length-fee-bounded)
-		///   - `M` is members-count (code- and governance-bounded)
-		///   - `P1` is the complexity of `proposal` preimage.
-		///   - `P2` is proposal-count (code-bounded)
-		#[pallet::call_index(4)]
-		#[pallet::weight((
-			{
-				let b = *length_bound;
-				let m = T::MaxMembers::get();
-				let p1 = *proposal_weight_bound;
-				let p2 = T::MaxProposals::get();
-				T::WeightInfo::close_early_approved(b, m, p2)
-					.max(T::WeightInfo::close_early_disapproved(m, p2))
-					.max(T::WeightInfo::close_approved(b, m, p2))
-					.max(T::WeightInfo::close_disapproved(m, p2))
-					.saturating_add(p1.into())
-			},
-			DispatchClass::Operational
-		))]
-		#[allow(deprecated)]
-		#[deprecated(note = "1D weight is used in this extrinsic, please migrate to `close`")]
-		pub fn close_old_weight(
-			origin: OriginFor<T>,
-			proposal_hash: T::Hash,
-			#[pallet::compact] index: ProposalIndex,
-			#[pallet::compact] proposal_weight_bound: OldWeight,
-			#[pallet::compact] length_bound: u32,
-		) -> DispatchResultWithPostInfo {
-			let proposal_weight_bound: Weight = proposal_weight_bound.into();
-			let _ = ensure_signed(origin)?;
-
-			Self::do_close(proposal_hash, index, proposal_weight_bound, length_bound)
 		}
 
 		/// Disapprove a proposal, close, and remove it from the system, regardless of its current
@@ -970,6 +887,17 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		num_proposals as u32
 	}
 }
+
+impl<T: Config<I>, I: 'static> Pallet<T, I> {
+	fn set_new_members(new: Vec<T::AccountId>) {
+		let old = Members::<T, I>::get();
+		Members::<T, I>::put(&new);
+		Self::deposit_event(
+			Event::MembersChanged { old, new }
+		)	
+	} 
+}
+
 
 impl<T: Config<I>, I: 'static> ChangeMembers<T::AccountId> for Pallet<T, I> {
 	/// Update the members of the collective. Votes are updated and the prime is reset.
