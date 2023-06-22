@@ -192,9 +192,6 @@ pub mod pallet {
 		/// The runtime origin type.
 		type RuntimeOrigin: From<RawOrigin<Self::AccountId, I>>;
 
-		/// Pallet instance type
-		type IsValidatorCollective: Get<bool>;
-
 		/// The runtime call dispatch type.
 		type Proposal: Parameter
 			+ Dispatchable<
@@ -433,7 +430,7 @@ pub mod pallet {
 		))]
 		pub fn propose(
 			origin: OriginFor<T>,
-			#[pallet::compact] threshold: MemberCount,
+			#[pallet::compact] _threshold: MemberCount,
 			proposal: Box<<T as Config<I>>::Proposal>,
 			#[pallet::compact] length_bound: u32,
 		) -> DispatchResultWithPostInfo {
@@ -848,14 +845,11 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
 impl<T: Config<I>, I: 'static> CollectiveInterface<T::AccountId> for Pallet<T, I> {
 	fn set_new_members(new: Vec<T::AccountId>) {
-		let is_validator_collective = T::IsValidatorCollective::get();
-		if is_validator_collective {
-			let old = Members::<T, I>::get();
-			Members::<T, I>::put(&new);
-			Self::deposit_event(
-				Event::MembersChanged { old, new }
-			);
-		}
+		let old = Members::<T, I>::get();
+		Members::<T, I>::put(&new);
+		Self::deposit_event(
+			Event::MembersChanged { old, new }
+		);
 	}
 }
 

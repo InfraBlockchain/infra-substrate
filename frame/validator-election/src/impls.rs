@@ -3,6 +3,11 @@ use crate::*;
 pub trait CollectiveInterface<AccountId> {
 	fn set_new_members(new: Vec<AccountId>);
 }
+
+impl<AccountId> CollectiveInterface<AccountId> for () {
+	fn set_new_members(_new: Vec<AccountId>) {}
+}
+
 pub trait SessionAlert<BlockNumber> {
 	/// Whether new session has triggered
 	fn is_new_session(n: BlockNumber) -> bool;
