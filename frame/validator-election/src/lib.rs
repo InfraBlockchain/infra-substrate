@@ -156,6 +156,9 @@ pub mod pallet {
 		/// Interface for interacting with a session pallet.
 		type SessionInterface: SessionInterface<Self::AccountId>;
 
+		/// Interface for interacting with validator collective pallet
+		type CollectiveInterface: CollectiveInterface<Self::AccountId>;
+
 		/// Interface for fee reward
 		type RewardInterface: RewardInterface;
 	}

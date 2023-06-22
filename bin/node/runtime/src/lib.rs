@@ -995,8 +995,6 @@ type CouncilCollective = pallet_collective::Instance1;
 impl pallet_collective::Config<CouncilCollective> for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type IsValidatorCollective = ValidatorCollective;
-	type SessionInterface = ();
-	type SessionAlert = Babe;
 	type Proposal = RuntimeCall;
 	type RuntimeEvent = RuntimeEvent;
 	type MotionDuration = CouncilMotionDuration;
@@ -1058,8 +1056,6 @@ type TechnicalCollective = pallet_collective::Instance2;
 impl pallet_collective::Config<TechnicalCollective> for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type IsValidatorCollective = NotValidatorCollective;
-	type SessionInterface = ();
-	type SessionAlert = Babe;
 	type Proposal = RuntimeCall;
 	type RuntimeEvent = RuntimeEvent;
 	type MotionDuration = TechnicalMotionDuration;
@@ -1689,8 +1685,6 @@ type AllianceCollective = pallet_collective::Instance3;
 impl pallet_collective::Config<AllianceCollective> for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type IsValidatorCollective = NotValidatorCollective;
-	type SessionInterface = ();
-	type SessionAlert = Babe;
 	type Proposal = RuntimeCall;
 	type RuntimeEvent = RuntimeEvent;
 	type MotionDuration = AllianceMotionDuration;

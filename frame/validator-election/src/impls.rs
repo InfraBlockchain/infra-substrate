@@ -1,12 +1,15 @@
 use crate::*;
 
+pub trait CollectiveInterface<AccountId> {
+	fn set_new_members(new: Vec<AccountId>);
+}
 pub trait SessionAlert<BlockNumber> {
 	/// Whether new session has triggered
 	fn is_new_session(n: BlockNumber) -> bool;
 }
 
 impl<T: Config> SessionAlert<T::BlockNumber> for Pallet<T> {
-	fn is_new_session(n: T::BlockNumber) -> bool {
+	fn is_new_session(_n: T::BlockNumber) -> bool {
 		true
 	}
 }
@@ -231,6 +234,7 @@ impl<T: Config> Pallet<T> {
 			validators: new_validators.clone(),
 			pot_enabled,
 		});
+		T::CollectiveInterface::set_new_members(new_validators.clone());
 		new_validators
 	}
 

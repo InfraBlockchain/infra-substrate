@@ -60,8 +60,7 @@ use frame_support::{
 	weights::Weight,
 };
 
-use pallet_validator_election::SessionInterface;
-use pallet_session::ShouldEndSession;
+use pallet_validator_election::CollectiveInterface;
 
 #[cfg(test)]
 mod tests;
@@ -171,7 +170,7 @@ pub struct Votes<AccountId, BlockNumber> {
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::{pallet_prelude::*, traits::Hooks};
+	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 
 	/// The current storage version.
@@ -195,12 +194,6 @@ pub mod pallet {
 
 		/// Pallet instance type
 		type IsValidatorCollective: Get<bool>;
-
-		/// Session interacting type
-		type SessionInterface: SessionInterface<Self::AccountId>;
-
-		/// Session alert type
-		type SessionAlert: ShouldEndSession<Self::BlockNumber>;
 
 		/// The runtime call dispatch type.
 		type Proposal: Parameter
@@ -255,29 +248,6 @@ pub mod pallet {
 			);
 
 			Pallet::<T, I>::initialize_members(&self.members)
-		}
-	}
-
-	#[pallet::hooks]
-	impl<T: Config<I>, I: 'static> Hooks<BlockNumberFor<T>> for Pallet<T, I> {
-		fn on_initialize(n: T::BlockNumber) -> Weight {
-			// Anything that needs to be done at the start of the block.
-			//
-			// **Warning**
-			// `T::SessionAlert` `T::SessionInterface` should be above the Pallet
-			// 
-			// Condition check
-			// 1. If session ends
-			// 2. If it is validator collective pallet
-			// Collective members should change to new session validator set
-			if T::SessionAlert::should_end_session(n) && T::IsValidatorCollective::get() {
-				
-				let validators = T::SessionInterface::validators();
-				Self::set_new_members(validators);
-				T::DbWeight::get().reads_writes(2, 1)
-			} else {
-				Weight::zero()
-			}
 		}
 	}
 
@@ -876,16 +846,18 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 	}
 }
 
-impl<T: Config<I>, I: 'static> Pallet<T, I> {
+impl<T: Config<I>, I: 'static> CollectiveInterface<T::AccountId> for Pallet<T, I> {
 	fn set_new_members(new: Vec<T::AccountId>) {
-		let old = Members::<T, I>::get();
-		Members::<T, I>::put(&new);
-		Self::deposit_event(
-			Event::MembersChanged { old, new }
-		)	
-	} 
+		let is_validator_collective = T::IsValidatorCollective::get();
+		if is_validator_collective {
+			let old = Members::<T, I>::get();
+			Members::<T, I>::put(&new);
+			Self::deposit_event(
+				Event::MembersChanged { old, new }
+			);
+		}
+	}
 }
-
 
 impl<T: Config<I>, I: 'static> ChangeMembers<T::AccountId> for Pallet<T, I> {
 	/// Update the members of the collective. Votes are updated and the prime is reset.
