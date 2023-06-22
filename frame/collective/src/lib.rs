@@ -185,6 +185,11 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config<I: 'static = ()>: frame_system::Config {
+
+		/// The runtime event type.
+		type RuntimeEvent: From<Event<Self, I>>
+		+ IsType<<Self as frame_system::Config>::RuntimeEvent>;
+
 		/// The runtime origin type.
 		type RuntimeOrigin: From<RawOrigin<Self::AccountId, I>>;
 
@@ -205,10 +210,6 @@ pub mod pallet {
 			> + From<frame_system::Call<Self>>
 			+ GetDispatchInfo;
 
-		/// The runtime event type.
-		type RuntimeEvent: From<Event<Self, I>>
-			+ IsType<<Self as frame_system::Config>::RuntimeEvent>;
-
 		/// The time-out for council motions.
 		type MotionDuration: Get<Self::BlockNumber>;
 
@@ -227,9 +228,6 @@ pub mod pallet {
 
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
-
-		/// Origin allowed to set collective members
-		type SetMembersOrigin: EnsureOrigin<<Self as frame_system::Config>::RuntimeOrigin>;
 	}
 
 	#[pallet::genesis_config]
