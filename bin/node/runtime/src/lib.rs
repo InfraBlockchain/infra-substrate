@@ -988,13 +988,11 @@ parameter_types! {
 	pub const CouncilMotionDuration: BlockNumber = 5 * DAYS;
 	pub const CouncilMaxProposals: u32 = 100;
 	pub const CouncilMaxMembers: u32 = 100;
-	pub const ValidatorCollective: bool = true;
 }
 
 type CouncilCollective = pallet_collective::Instance1;
 impl pallet_collective::Config<CouncilCollective> for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
-	type IsValidatorCollective = ValidatorCollective;
 	type Proposal = RuntimeCall;
 	type RuntimeEvent = RuntimeEvent;
 	type MotionDuration = CouncilMotionDuration;
@@ -1049,13 +1047,11 @@ parameter_types! {
 	pub const TechnicalMotionDuration: BlockNumber = 5 * DAYS;
 	pub const TechnicalMaxProposals: u32 = 100;
 	pub const TechnicalMaxMembers: u32 = 100;
-	pub const NotValidatorCollective: bool = false;
 }
 
 type TechnicalCollective = pallet_collective::Instance2;
 impl pallet_collective::Config<TechnicalCollective> for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
-	type IsValidatorCollective = NotValidatorCollective;
 	type Proposal = RuntimeCall;
 	type RuntimeEvent = RuntimeEvent;
 	type MotionDuration = TechnicalMotionDuration;
@@ -1684,7 +1680,6 @@ parameter_types! {
 type AllianceCollective = pallet_collective::Instance3;
 impl pallet_collective::Config<AllianceCollective> for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
-	type IsValidatorCollective = NotValidatorCollective;
 	type Proposal = RuntimeCall;
 	type RuntimeEvent = RuntimeEvent;
 	type MotionDuration = AllianceMotionDuration;

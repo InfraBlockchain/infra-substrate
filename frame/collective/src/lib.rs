@@ -430,7 +430,7 @@ pub mod pallet {
 		))]
 		pub fn propose(
 			origin: OriginFor<T>,
-			#[pallet::compact] _threshold: MemberCount,
+			#[pallet::compact] threshold: MemberCount,
 			proposal: Box<<T as Config<I>>::Proposal>,
 			#[pallet::compact] length_bound: u32,
 		) -> DispatchResultWithPostInfo {
@@ -438,19 +438,29 @@ pub mod pallet {
 			let members = Self::members();
 			ensure!(members.contains(&who), Error::<T, I>::NotMember);
 
-			// The threshold for more than 2/3 of the validators to agree
-			let members_len = members.len() as u32;
-			let threshold = if members_len < 3 { 1 } else { (members_len * 2) / 3 };
+			if threshold < 2 {
+				let (proposal_len, result) = Self::do_propose_execute(proposal, length_bound)?;
 
-			let (proposal_len, active_proposals) =
-				Self::do_propose_proposed(who, threshold, proposal, length_bound)?;
+				Ok(get_result_weight(result)
+					.map(|w| {
+						T::WeightInfo::propose_execute(
+							proposal_len as u32,  // B
+							members.len() as u32, // M
+						)
+						.saturating_add(w) // P1
+					})
+					.into())
+			} else {
+				let (proposal_len, active_proposals) =
+					Self::do_propose_proposed(who, threshold, proposal, length_bound)?;
 
-			Ok(Some(T::WeightInfo::propose_proposed(
-				proposal_len as u32,  // B
-				members.len() as u32, // M
-				active_proposals,     // P2
-			))
-			.into())
+				Ok(Some(T::WeightInfo::propose_proposed(
+					proposal_len as u32,  // B
+					members.len() as u32, // M
+					active_proposals,     // P2
+				))
+				.into())
+			}
 		}
 
 		/// Add an aye or nay vote for the sender to the given proposal.
