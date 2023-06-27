@@ -102,7 +102,7 @@
 use sp_runtime::{traits::StaticLookup, DispatchResult};
 use sp_std::prelude::*;
 
-use frame_support::{dispatch::GetDispatchInfo, traits::UnfilteredDispatchable};
+use frame_support::{dispatch::GetDispatchInfo, traits::{UnfilteredDispatchable, EnsureOrigin}};
 
 mod extension;
 #[cfg(test)]
@@ -188,30 +188,6 @@ pub mod pallet {
 			Ok(Pays::No.into())
 		}
 
-		/// Authenticates the current sudo key and sets the given AccountId (`new`) as the new sudo
-		/// key.
-		///
-		/// The dispatch origin for this call must be _Signed_.
-		///
-		/// ## Complexity
-		/// - O(1).
-		#[pallet::call_index(2)]
-		#[pallet::weight(0)]
-		pub fn set_key(
-			origin: OriginFor<T>,
-			new: AccountIdLookupOf<T>,
-		) -> DispatchResultWithPostInfo {
-			// This is a public call, so we ensure that the origin is some signed account.
-			let sender = ensure_signed(origin)?;
-			ensure!(Self::key().map_or(false, |k| sender == k), Error::<T>::RequireSudo);
-			let new = T::Lookup::lookup(new)?;
-
-			Self::deposit_event(Event::KeyChanged { old_sudoer: Key::<T>::get() });
-			Key::<T>::put(&new);
-			// Sudo user does not pay a fee.
-			Ok(Pays::No.into())
-		}
-
 		/// Authenticates the sudo key and dispatches a function call with `Signed` origin from
 		/// a given account.
 		///
@@ -219,7 +195,7 @@ pub mod pallet {
 		///
 		/// ## Complexity
 		/// - O(1).
-		#[pallet::call_index(3)]
+		#[pallet::call_index(2)]
 		#[pallet::weight({
 			let dispatch_info = call.get_dispatch_info();
 			(
@@ -248,6 +224,20 @@ pub mod pallet {
 			// Sudo user does not pay a fee.
 			Ok(Pays::No.into())
 		}
+
+		/// Remove sudo key
+		#[pallet::call_index(3)]
+		#[pallet::weight(1000)]
+		pub fn remove_key(
+			origin: OriginFor<T>,
+		) -> DispatchResultWithPostInfo {
+			ensure_root(origin)?;
+			Key::<T>::kill();
+			Self::deposit_event(
+				Event::<T>::SudoKeyRemoved
+			);
+			Ok(Pays::No.into())
+		}
 	}
 
 	#[pallet::event]
@@ -255,8 +245,8 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// A sudo just took place. \[result\]
 		Sudid { sudo_result: DispatchResult },
-		/// The \[sudoer\] just switched identity; the old key is supplied if one existed.
-		KeyChanged { old_sudoer: Option<T::AccountId> },
+		/// Sudo key has been removed.
+		SudoKeyRemoved,
 		/// A sudo just took place. \[result\]
 		SudoAsDone { sudo_result: DispatchResult },
 	}
