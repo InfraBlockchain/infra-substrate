@@ -231,7 +231,8 @@ pub mod pallet {
 		pub fn remove_key(
 			origin: OriginFor<T>,
 		) -> DispatchResultWithPostInfo {
-			ensure_root(origin)?;
+			let sender = ensure_signed(origin)?;
+			ensure!(Self::key().map_or(false, |k| sender == k), Error::<T>::RequireSudo);
 			Key::<T>::kill();
 			Self::deposit_event(
 				Event::<T>::SudoKeyRemoved
