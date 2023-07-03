@@ -24,6 +24,7 @@ pub trait RewardInterface {
 	/// Fee will be aggregated on certain account for current session
 	fn aggregate_reward(
 		session_index: SessionIndex,
+		wrapped_system_token_id: WrappedSystemTokenId,
 		system_token_id: SystemTokenId,
 		amount: VoteWeight,
 	);
@@ -34,7 +35,8 @@ pub trait RewardInterface {
 impl RewardInterface for () {
 	fn aggregate_reward(
 		_session_index: SessionIndex,
-		_system_token_id: SystemTokenId,
+		_wrapped_system_token_id: WrappedSystemTokenId,
+		__system_token_id: SystemTokenId,
 		_amount: VoteWeight,
 	) {
 	}

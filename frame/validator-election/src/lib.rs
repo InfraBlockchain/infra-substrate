@@ -27,6 +27,8 @@ pub type SessionIndex = u32;
 /// Counter for the number of eras that have passed.
 pub type EraIndex = u32;
 
+pub type WrappedSystemTokenId = SystemTokenId;
+
 pub(crate) const LOG_TARGET: &str = "runtime::voting-manager";
 // syntactic sugar for logging.
 #[macro_export]
