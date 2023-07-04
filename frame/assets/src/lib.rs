@@ -1667,7 +1667,11 @@ pub mod pallet {
 			details.is_sufficient = is_sufficient;
 			Asset::<T, I>::insert(&id, details);
 
+<<<<<<< Updated upstream
 			T::AssetLink::unlink_system_token(id);
+=======
+			T::AssetLink::unlink_system_token(id)?;
+>>>>>>> Stashed changes
 
 			Self::deposit_event(Event::AssetIsSufficientChanged {
 				asset_id: id,
@@ -1722,7 +1726,11 @@ pub mod pallet {
 			let _ = Self::do_force_create(id, owner, is_sufficient, min_balance);
 			ensure!(Asset::<T, I>::contains_key(id), Error::<T, I>::Unknown);
 
+<<<<<<< Updated upstream
 			T::AssetLink::link_system_token(id, system_token_id);
+=======
+			T::AssetLink::link_system_token(id, system_token_id)?;
+>>>>>>> Stashed changes
 
 			Metadata::<T, I>::try_mutate_exists(id, |metadata| {
 				let deposit = metadata.take().map_or(Zero::zero(), |m| m.deposit);
@@ -1748,6 +1756,7 @@ pub mod pallet {
 }
 
 pub trait AssetLinkInterface<AssetId> {
+<<<<<<< Updated upstream
 	fn link_system_token(asset_id: AssetId, system_token_id: SystemTokenId);
 	fn unlink_system_token(asset_id: AssetId);
 }
@@ -1755,6 +1764,19 @@ pub trait AssetLinkInterface<AssetId> {
 impl<AssetId> AssetLinkInterface<AssetId> for () {
 	fn link_system_token(_asset_id: AssetId, _system_token_id: SystemTokenId) {}
 	fn unlink_system_token(_asset_id: AssetId) {}
+=======
+	fn link_system_token(asset_id: AssetId, system_token_id: SystemTokenId) -> DispatchResult;
+	fn unlink_system_token(asset_id: AssetId) -> DispatchResult;
+}
+
+impl<AssetId> AssetLinkInterface<AssetId> for () {
+	fn link_system_token(_asset_id: AssetId, _system_token_id: SystemTokenId) -> DispatchResult {
+		Ok(())
+	}
+	fn unlink_system_token(_asset_id: AssetId) -> DispatchResult {
+		Ok(())
+	}
+>>>>>>> Stashed changes
 }
 
 sp_core::generate_feature_enabled_macro!(runtime_benchmarks_enabled, feature = "runtime-benchmarks", $);
