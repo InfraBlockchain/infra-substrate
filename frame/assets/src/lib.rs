@@ -157,6 +157,7 @@ use sp_runtime::{
 };
 use sp_std::{borrow::Borrow, prelude::*};
 
+use crate::types::AssetIdOf;
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	ensure,
@@ -168,7 +169,8 @@ use frame_support::{
 		Currency, EnsureOriginWithArg, ReservableCurrency, StoredMap,
 	},
 };
-use frame_system::Config as SystemConfig;
+use frame_system::{pallet_prelude::OriginFor, Config as SystemConfig};
+use sp_runtime::types::SystemTokenId;
 
 pub use pallet::*;
 pub use weights::WeightInfo;
@@ -229,6 +231,9 @@ pub mod pallet {
 			+ MaybeSerializeDeserialize
 			+ MaxEncodedLen
 			+ TypeInfo;
+
+		// The Links connecting system tokens between chains.
+		type AssetLink: AssetLinkInterface<Self, I>;
 
 		/// Max number of items to destroy per `destroy_accounts` and `destroy_approvals` call.
 		///
@@ -1639,6 +1644,39 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Sets the is_sufficient flag and unlink system token id of an asset.
+		///
+		///
+		/// Origin must be Signed and the sender has to be the root
+		///
+		/// - `id`: The identifier of the asset.
+		/// - `is_sufficient`: The new value of `is_sufficient`.
+		///
+		/// Emits `AssetIsSufficientChanged` event when successful.
+		#[pallet::call_index(31)]
+		#[pallet::weight(T::WeightInfo::set_min_balance())]
+		pub fn set_sufficient_with_unlink_system_token(
+			origin: OriginFor<T>,
+			id: T::AssetIdParameter,
+			is_sufficient: bool,
+		) -> DispatchResult {
+			T::ForceOrigin::ensure_origin(origin.clone())?;
+			let id: T::AssetId = id.into();
+
+			let mut details = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
+
+			details.is_sufficient = is_sufficient;
+			Asset::<T, I>::insert(&id, details);
+
+			T::AssetLink::unlink_system_token(origin, id)?;
+
+			Self::deposit_event(Event::AssetIsSufficientChanged {
+				asset_id: id,
+				new_is_sufficient: is_sufficient,
+			});
+			Ok(())
+		}
+
 		/// Issue a new class of fungible assets with metadata from a privileged origin.
 		///
 		/// This new asset class has no assets initially.
@@ -1658,7 +1696,7 @@ pub mod pallet {
 		/// Emits `ForceCreated` event when successful.
 		///
 		/// Weight: `O(1)`
-		#[pallet::call_index(31)]
+		#[pallet::call_index(32)]
 		#[pallet::weight(T::WeightInfo::force_set_metadata(name.len() as u32, symbol.len() as u32))]
 		pub fn force_create_with_metadata(
 			origin: OriginFor<T>,
@@ -1670,8 +1708,9 @@ pub mod pallet {
 			symbol: Vec<u8>,
 			decimals: u8,
 			is_frozen: bool,
+			system_token_id: SystemTokenId,
 		) -> DispatchResult {
-			T::ForceOrigin::ensure_origin(origin)?;
+			T::ForceOrigin::ensure_origin(origin.clone())?;
 			let owner = T::Lookup::lookup(owner)?;
 			let id: T::AssetId = id.into();
 
@@ -1683,6 +1722,9 @@ pub mod pallet {
 
 			let _ = Self::do_force_create(id, owner, is_sufficient, min_balance);
 			ensure!(Asset::<T, I>::contains_key(id), Error::<T, I>::Unknown);
+
+			T::AssetLink::link_system_token(origin, id, system_token_id)?;
+
 			Metadata::<T, I>::try_mutate_exists(id, |metadata| {
 				let deposit = metadata.take().map_or(Zero::zero(), |m| m.deposit);
 				*metadata = Some(AssetMetadata {
@@ -1703,6 +1745,38 @@ pub mod pallet {
 				Ok(())
 			})
 		}
+	}
+}
+
+pub trait AssetLinkInterface<T, I = ()>
+where
+	T: frame_system::Config + pallet::Config<I>,
+	I: 'static,
+{
+	fn link_system_token(
+		origin: OriginFor<T>,
+		asset_id: AssetIdOf<T, I>,
+		multilocation: SystemTokenId,
+	) -> DispatchResult;
+
+	fn unlink_system_token(origin: OriginFor<T>, asset_id: AssetIdOf<T, I>) -> DispatchResult;
+}
+
+impl<T, I> AssetLinkInterface<T, I> for ()
+where
+	T: frame_system::Config + pallet::Config<I>,
+	I: 'static,
+{
+	fn link_system_token(
+		_origin: OriginFor<T>,
+		_asset_id: AssetIdOf<T, I>,
+		_multilocation: SystemTokenId,
+	) -> DispatchResult {
+		Ok(())
+	}
+
+	fn unlink_system_token(_origin: OriginFor<T>, _asset_id: AssetIdOf<T, I>) -> DispatchResult {
+		Ok(())
 	}
 }
 
