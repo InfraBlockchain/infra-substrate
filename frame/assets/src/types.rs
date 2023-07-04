@@ -220,7 +220,7 @@ pub enum ConversionError {
 // Type alias for `frame_system`'s account id.
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 // This pallet's asset id and balance type.
-type AssetIdOf<T, I> = <T as Config<I>>::AssetId;
+pub(crate) type AssetIdOf<T, I> = <T as Config<I>>::AssetId;
 type AssetBalanceOf<T, I> = <T as Config<I>>::Balance;
 // Generic fungible balance type.
 type BalanceOf<F, T> = <F as fungible::Inspect<AccountIdOf<T>>>::Balance;

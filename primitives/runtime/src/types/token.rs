@@ -8,7 +8,7 @@ use sp_std::prelude::*;
 use serde::{Deserialize, Serialize};
 
 pub type ParaId = u32;
-pub type PalletId = u32;
+pub type PalletId = u8;
 pub type AssetId = u32;
 
 /// Data structure for Original system tokens
@@ -40,7 +40,7 @@ pub struct SystemTokenId {
 }
 
 impl SystemTokenId {
-	pub fn new(para_id: u32, pallet_id: u32, asset_id: AssetId) -> Self {
+	pub fn new(para_id: u32, pallet_id: u8, asset_id: AssetId) -> Self {
 		Self { para_id, pallet_id, asset_id }
 	}
 }
