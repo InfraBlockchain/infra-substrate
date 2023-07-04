@@ -157,14 +157,13 @@ use sp_runtime::{
 };
 use sp_std::{borrow::Borrow, prelude::*};
 
-use crate::types::AssetIdOf;
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	ensure,
 	pallet_prelude::DispatchResultWithPostInfo,
 	storage::KeyPrefixIterator,
 	traits::{
-		tokens::{fungibles, DepositConsequence, WithdrawConsequence},
+		tokens::{fungibles, fungibles::Inspect, DepositConsequence, WithdrawConsequence},
 		BalanceStatus::Reserved,
 		Currency, EnsureOriginWithArg, ReservableCurrency, StoredMap,
 	},
@@ -233,7 +232,7 @@ pub mod pallet {
 			+ TypeInfo;
 
 		// The Links connecting system tokens between chains.
-		type AssetLink: AssetLinkInterface<Self, I>;
+		type AssetLink: AssetLinkInterface<Self::AssetId>;
 
 		/// Max number of items to destroy per `destroy_accounts` and `destroy_approvals` call.
 		///
@@ -1668,7 +1667,7 @@ pub mod pallet {
 			details.is_sufficient = is_sufficient;
 			Asset::<T, I>::insert(&id, details);
 
-			T::AssetLink::unlink_system_token(origin, id)?;
+			T::AssetLink::unlink_system_token(id);
 
 			Self::deposit_event(Event::AssetIsSufficientChanged {
 				asset_id: id,
@@ -1723,7 +1722,7 @@ pub mod pallet {
 			let _ = Self::do_force_create(id, owner, is_sufficient, min_balance);
 			ensure!(Asset::<T, I>::contains_key(id), Error::<T, I>::Unknown);
 
-			T::AssetLink::link_system_token(origin, id, system_token_id)?;
+			T::AssetLink::link_system_token(id, system_token_id);
 
 			Metadata::<T, I>::try_mutate_exists(id, |metadata| {
 				let deposit = metadata.take().map_or(Zero::zero(), |m| m.deposit);
@@ -1748,36 +1747,14 @@ pub mod pallet {
 	}
 }
 
-pub trait AssetLinkInterface<T, I = ()>
-where
-	T: frame_system::Config + pallet::Config<I>,
-	I: 'static,
-{
-	fn link_system_token(
-		origin: OriginFor<T>,
-		asset_id: AssetIdOf<T, I>,
-		system_token_id: SystemTokenId,
-	) -> DispatchResult;
-
-	fn unlink_system_token(origin: OriginFor<T>, asset_id: AssetIdOf<T, I>) -> DispatchResult;
+pub trait AssetLinkInterface<AssetId> {
+	fn link_system_token(asset_id: AssetId, system_token_id: SystemTokenId);
+	fn unlink_system_token(asset_id: AssetId);
 }
 
-impl<T, I> AssetLinkInterface<T, I> for ()
-where
-	T: frame_system::Config + pallet::Config<I>,
-	I: 'static,
-{
-	fn link_system_token(
-		_origin: OriginFor<T>,
-		_asset_id: AssetIdOf<T, I>,
-		_system_token_id: SystemTokenId,
-	) -> DispatchResult {
-		Ok(())
-	}
-
-	fn unlink_system_token(_origin: OriginFor<T>, _asset_id: AssetIdOf<T, I>) -> DispatchResult {
-		Ok(())
-	}
+impl<AssetId> AssetLinkInterface<AssetId> for () {
+	fn link_system_token(_asset_id: AssetId, _system_token_id: SystemTokenId) {}
+	fn unlink_system_token(_asset_id: AssetId) {}
 }
 
 sp_core::generate_feature_enabled_macro!(runtime_benchmarks_enabled, feature = "runtime-benchmarks", $);
