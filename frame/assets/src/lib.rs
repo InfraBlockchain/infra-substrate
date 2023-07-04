@@ -1756,7 +1756,7 @@ where
 	fn link_system_token(
 		origin: OriginFor<T>,
 		asset_id: AssetIdOf<T, I>,
-		multilocation: SystemTokenId,
+		system_token_id: SystemTokenId,
 	) -> DispatchResult;
 
 	fn unlink_system_token(origin: OriginFor<T>, asset_id: AssetIdOf<T, I>) -> DispatchResult;
@@ -1770,7 +1770,7 @@ where
 	fn link_system_token(
 		_origin: OriginFor<T>,
 		_asset_id: AssetIdOf<T, I>,
-		_multilocation: SystemTokenId,
+		_system_token_id: SystemTokenId,
 	) -> DispatchResult {
 		Ok(())
 	}
