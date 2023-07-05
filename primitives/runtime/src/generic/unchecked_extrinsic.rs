@@ -40,8 +40,8 @@ const EXTRINSIC_FORMAT_VERSION: u8 = 4;
 const MAX_UNCHECKED_EXTENSION: u8 = 10;
 
 #[derive(PartialEq, Eq, Clone, sp_core::RuntimeDebug, Encode, Decode)]
-pub enum UncheckedTxExtension<Address, Signature> {
-	FeePayer(Option<(Address, Signature)>),
+pub enum UncheckedTxExtension<Address, Signature, Extra> {
+	FeePayer(Option<(Address, Signature, Extra)>),
 }
 
 /// A extrinsic right from the external world. This is unchecked and so
@@ -55,7 +55,7 @@ where
 	/// the same signer and an era describing the longevity of this transaction,
 	/// if this is a signed extrinsic.
 	pub signature:
-		Option<(Address, Signature, Extra, Option<Vec<UncheckedTxExtension<Address, Signature>>>)>,
+		Option<(Address, Signature, Extra, Option<Vec<UncheckedTxExtension<Address, Signature, Extra>>>)>,
 	/// The function that should be called.
 	pub function: Call,
 }
@@ -103,7 +103,7 @@ impl<Address, Call, Signature, Extra: SignedExtension>
 		signed: Address,
 		signature: Signature,
 		extra: Extra,
-		unchecked_extension: Option<Vec<UncheckedTxExtension<Address, Signature>>>,
+		unchecked_extension: Option<Vec<UncheckedTxExtension<Address, Signature, Extra>>>,
 	) -> Self {
 		Self { signature: Some((signed, signature, extra, unchecked_extension)), function }
 	}
@@ -120,7 +120,7 @@ impl<Address, Call, Signature, Extra: SignedExtension> Extrinsic
 	type Call = Call;
 
 	type SignaturePayload =
-		(Address, Signature, Extra, Option<Vec<UncheckedTxExtension<Address, Signature>>>);
+		(Address, Signature, Extra, Option<Vec<UncheckedTxExtension<Address, Signature, Extra>>>);
 
 	fn is_signed(&self) -> Option<bool> {
 		Some(self.signature.is_some())
@@ -152,27 +152,29 @@ where
 		Ok(match self.signature {
 			Some((signed, signature, extra, maybe_unchecked_extensions)) => {
 				let caller = lookup.lookup(signed)?;
-				let mut checked_extensions: Vec<CheckedTxExtension<AccountId>> = Default::default();
+				let mut checked_extensions: Vec<CheckedTxExtension<AccountId, Extra>> = Default::default();
 				let mut is_fee_payer_included = false;
-				let raw_payload = SignedPayload::new(self.function, extra)?;
+				let raw_payload = SignedPayload::new(self.function.clone(), extra)?;
 				if let Some(unchecked_extensions) = maybe_unchecked_extensions {
 					if unchecked_extensions.len() as u8 > MAX_UNCHECKED_EXTENSION {
 						return Err(InvalidTransaction::Call.into());
 					}
 					for ext in unchecked_extensions {
 						match ext {
-							UncheckedTxExtension::FeePayer(maybe_addr_and_sig) =>
-								match maybe_addr_and_sig {
-									Some((addr, sig)) => {
+							UncheckedTxExtension::FeePayer(maybe_addr_and_sig_and_extra) =>
+								match maybe_addr_and_sig_and_extra {
+									Some((addr, sig, extra)) => {
 										if !is_fee_payer_included {
+											log::trace!(target: "runtime::unchecked", " 😎 Extra => {:?}", extra);
 											let fee_payer = lookup.lookup(addr)?;
+											let raw_payload = SignedPayload::new(self.function.clone(), extra.clone())?;
 											if !raw_payload.using_encoded(|payload| {
 												sig.verify(payload, &fee_payer)
 											}) {
-												return Err(InvalidTransaction::BadProof.into())
+												return Err(InvalidTransaction::BadFeePayer.into())
 											}
 											checked_extensions
-												.push(CheckedTxExtension::FeePayer(fee_payer));
+												.push(CheckedTxExtension::FeePayer((fee_payer, extra)));
 											is_fee_payer_included = true;
 										}
 									},

@@ -398,7 +398,7 @@ where
 		len: usize,
 	) -> ApplyExtrinsicResultWithInfo<PostDispatchInfoOf<Self::Call>> {
 		let maybe_who = if let Some((who, extra)) = self.signature {
-			Extra::pre_dispatch(extra, &who, &self.call, info, len)?;
+			Extra::pre_dispatch(extra, &who, false, &self.call, info, len)?;
 			Some(who)
 		} else {
 			Extra::pre_dispatch_unsigned(&self.call, info, len)?;

@@ -817,12 +817,18 @@ where
 	fn pre_dispatch(
 		self,
 		who: &Self::AccountId,
+		is_fee_payer: bool,
 		call: &Self::Call,
 		info: &DispatchInfoOf<Self::Call>,
 		len: usize,
 	) -> Result<Self::Pre, TransactionValidityError> {
-		let (_fee, imbalance) = self.withdraw_fee(who, call, info, len)?;
-		Ok((self.0, who.clone(), imbalance))
+		let mut actual_imbalance: <<T as Config>::OnChargeTransaction as OnChargeTransaction<T>>::LiquidityInfo = Default::default();
+		if is_fee_payer {
+			let (_fee, imbalance) = self.withdraw_fee(who, call, info, len)?;
+			actual_imbalance = imbalance
+		}
+
+		Ok((self.0, who.clone(), actual_imbalance))
 	}
 
 	fn post_dispatch(

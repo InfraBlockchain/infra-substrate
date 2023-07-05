@@ -28,8 +28,8 @@ use crate::{
 use sp_std::vec::Vec;
 
 #[derive(PartialEq, Eq, Clone, sp_core::RuntimeDebug)]
-pub enum CheckedTxExtension<AccountId> {
-	FeePayer(AccountId),
+pub enum CheckedTxExtension<AccountId, Extra> {
+	FeePayer((AccountId, Extra)),
 }
 
 /// Definition of something that the external world might want to say; its
@@ -41,7 +41,7 @@ pub struct CheckedExtrinsic<AccountId, Call, Extra> {
 	/// from the same signer, if anyone (note this is not a signature).
 	pub signed: Option<(AccountId, Extra)>,
 
-	pub maybe_extensions: Option<Vec<CheckedTxExtension<AccountId>>>,
+	pub maybe_extensions: Option<Vec<CheckedTxExtension<AccountId, Extra>>>,
 
 	/// The function that should be called.
 	pub function: Call,
@@ -80,21 +80,27 @@ where
 		len: usize,
 	) -> crate::ApplyExtrinsicResultWithInfo<PostDispatchInfoOf<Self::Call>> {
 		let (maybe_caller, maybe_pre) = if let Some((caller, extra)) = self.signed {
-			let mut fee_payer: Option<AccountId> = None;
+			let mut maybe_fee_payer_pre: Option<<Extra as SignedExtension>::Pre> = None;
+			let mut is_fee_payer: bool = true;
 			match self.maybe_extensions {
 				Some(extensions) =>
 					for ext in extensions {
 						match ext {
-							CheckedTxExtension::FeePayer(acc) => {
-								fee_payer = Some(acc);
+							CheckedTxExtension::FeePayer((fee_payer, fee_payer_extra)) => {
+								log::trace!(target: "runtime::chekced", "✅ Fee Payer => {:?}", fee_payer);
+								let pre = Extra::pre_dispatch(fee_payer_extra, &fee_payer, true, &self.function, info, len)?;
+								is_fee_payer = false;
+								// If there is fee payer, change caller's `Pre` to None.
+								maybe_fee_payer_pre = Some(pre);
 							},
 						}
 					},
 				None => (),
 			}
-			let payer = fee_payer.or(Some(caller.clone())).expect("There should be account to pay a fee");
-			let pre = Extra::pre_dispatch(extra, &payer, &self.function, info, len)?;
-			(Some(caller), Some(pre))
+			// let payer = fee_payer.or(Some(caller.clone())).expect("There should be account to pay a fee");
+			let pre = Extra::pre_dispatch(extra, &caller, is_fee_payer, &self.function, info, len)?;
+			let maybe_pre = maybe_fee_payer_pre.or_else(|| Some(pre));
+			(Some(caller), maybe_pre)
 		} else {
 			Extra::pre_dispatch_unsigned(&self.function, info, len)?;
 			U::pre_dispatch(&self.function)?;

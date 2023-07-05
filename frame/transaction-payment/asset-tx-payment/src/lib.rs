@@ -254,12 +254,17 @@ where
 	fn pre_dispatch(
 		self,
 		who: &Self::AccountId,
+		is_fee_payer: bool,
 		call: &Self::Call,
 		info: &DispatchInfoOf<Self::Call>,
 		len: usize,
 	) -> Result<Self::Pre, TransactionValidityError> {
-		let (_fee, initial_payment) = self.withdraw_fee(who, call, info, len)?;
-		Ok((self.tip, who.clone(), initial_payment, self.asset_id))
+		let mut actual_payment: InitialPayment<T> = Default::default();
+		if is_fee_payer {
+			let (_fee, initial_payment) = self.withdraw_fee(who, call, info, len)?;
+			actual_payment = initial_payment;
+		}
+		Ok((self.tip, who.clone(), actual_payment, self.asset_id))
 	}
 
 	fn post_dispatch(

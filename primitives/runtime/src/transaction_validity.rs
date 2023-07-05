@@ -82,6 +82,8 @@ pub enum InvalidTransaction {
 	MandatoryValidation,
 	/// The sending address is disabled or known to be invalid.
 	BadSigner,
+
+	BadFeePayer,
 }
 
 impl InvalidTransaction {
@@ -113,6 +115,7 @@ impl From<InvalidTransaction> for &'static str {
 				"Transaction dispatch is mandatory; transactions must not be validated.",
 			InvalidTransaction::Custom(_) => "InvalidTransaction custom error",
 			InvalidTransaction::BadSigner => "Invalid signing address",
+			InvalidTransaction::BadFeePayer => "Transaction has a bad signature of fee payer",
 		}
 	}
 }
