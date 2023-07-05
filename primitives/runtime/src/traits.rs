@@ -1129,6 +1129,7 @@ pub trait SignedExtension:
 	fn pre_dispatch(
 		self,
 		who: &Self::AccountId,
+		is_fee_payer: bool,
 		call: &Self::Call,
 		info: &DispatchInfoOf<Self::Call>,
 		len: usize,
@@ -1247,11 +1248,12 @@ impl<AccountId, Call: Dispatchable> SignedExtension for Tuple {
 	fn pre_dispatch(
 		self,
 		who: &Self::AccountId,
+		is_fee_payer: bool,
 		call: &Self::Call,
 		info: &DispatchInfoOf<Self::Call>,
 		len: usize,
 	) -> Result<Self::Pre, TransactionValidityError> {
-		Ok(for_tuples!( ( #( Tuple.pre_dispatch(who, call, info, len)? ),* ) ))
+		Ok(for_tuples!( ( #( Tuple.pre_dispatch(who, is_fee_payer, call, info, len)? ),* ) ))
 	}
 
 	fn validate_unsigned(
@@ -1312,6 +1314,7 @@ impl SignedExtension for () {
 	fn pre_dispatch(
 		self,
 		who: &Self::AccountId,
+		_is_fee_payer: bool,
 		call: &Self::Call,
 		info: &DispatchInfoOf<Self::Call>,
 		len: usize,

@@ -186,6 +186,7 @@ where
 	fn pre_dispatch(
 		self,
 		_who: &Self::AccountId,
+		_is_fee_payer: bool,
 		_call: &Self::Call,
 		info: &DispatchInfoOf<Self::Call>,
 		len: usize,

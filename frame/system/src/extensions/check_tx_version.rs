@@ -65,6 +65,7 @@ impl<T: Config + Send + Sync> SignedExtension for CheckTxVersion<T> {
 	fn pre_dispatch(
 		self,
 		who: &Self::AccountId,
+		_is_fee_payer: bool,
 		call: &Self::Call,
 		info: &DispatchInfoOf<Self::Call>,
 		len: usize,

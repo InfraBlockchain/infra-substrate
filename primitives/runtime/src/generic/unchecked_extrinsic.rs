@@ -18,7 +18,7 @@
 //! Generic implementation of an unchecked (pre-verification) extrinsic.
 
 use crate::{
-	generic::CheckedExtrinsic,
+	generic::{CheckedExtrinsic, CheckedTxExtension},
 	traits::{
 		self, Checkable, Extrinsic, ExtrinsicMetadata, IdentifyAccount, MaybeDisplay, Member,
 		SignedExtension,
@@ -37,6 +37,12 @@ use sp_std::{fmt, prelude::*};
 /// It ensures that if the representation is changed and the format is not known,
 /// the decoding fails.
 const EXTRINSIC_FORMAT_VERSION: u8 = 4;
+const MAX_UNCHECKED_EXTENSION: u8 = 10;
+
+#[derive(PartialEq, Eq, Clone, sp_core::RuntimeDebug, Encode, Decode)]
+pub enum UncheckedTxExtension<Address, Signature, Extra> {
+	FeePayer(Option<(Address, Signature, Extra)>),
+}
 
 /// A extrinsic right from the external world. This is unchecked and so
 /// can contain a signature.
@@ -48,7 +54,8 @@ where
 	/// The signature, address, number of extrinsics have come before from
 	/// the same signer and an era describing the longevity of this transaction,
 	/// if this is a signed extrinsic.
-	pub signature: Option<(Address, Signature, Extra)>,
+	pub signature:
+		Option<(Address, Signature, Extra, Option<Vec<UncheckedTxExtension<Address, Signature, Extra>>>)>,
 	/// The function that should be called.
 	pub function: Call,
 }
@@ -91,8 +98,14 @@ impl<Address, Call, Signature, Extra: SignedExtension>
 	UncheckedExtrinsic<Address, Call, Signature, Extra>
 {
 	/// New instance of a signed extrinsic aka "transaction".
-	pub fn new_signed(function: Call, signed: Address, signature: Signature, extra: Extra) -> Self {
-		Self { signature: Some((signed, signature, extra)), function }
+	pub fn new_signed(
+		function: Call,
+		signed: Address,
+		signature: Signature,
+		extra: Extra,
+		unchecked_extension: Option<Vec<UncheckedTxExtension<Address, Signature, Extra>>>,
+	) -> Self {
+		Self { signature: Some((signed, signature, extra, unchecked_extension)), function }
 	}
 
 	/// New instance of an unsigned extrinsic aka "inherent".
@@ -106,15 +119,16 @@ impl<Address, Call, Signature, Extra: SignedExtension> Extrinsic
 {
 	type Call = Call;
 
-	type SignaturePayload = (Address, Signature, Extra);
+	type SignaturePayload =
+		(Address, Signature, Extra, Option<Vec<UncheckedTxExtension<Address, Signature, Extra>>>);
 
 	fn is_signed(&self) -> Option<bool> {
 		Some(self.signature.is_some())
 	}
 
 	fn new(function: Call, signed_data: Option<Self::SignaturePayload>) -> Option<Self> {
-		Some(if let Some((address, signature, extra)) = signed_data {
-			Self::new_signed(function, address, signature, extra)
+		Some(if let Some((address, signature, extra, unchecked_extension)) = signed_data {
+			Self::new_signed(function, address, signature, extra, unchecked_extension)
 		} else {
 			Self::new_unsigned(function)
 		})
@@ -136,17 +150,53 @@ where
 
 	fn check(self, lookup: &Lookup) -> Result<Self::Checked, TransactionValidityError> {
 		Ok(match self.signature {
-			Some((signed, signature, extra)) => {
-				let signed = lookup.lookup(signed)?;
-				let raw_payload = SignedPayload::new(self.function, extra)?;
-				if !raw_payload.using_encoded(|payload| signature.verify(payload, &signed)) {
+			Some((signed, signature, extra, maybe_unchecked_extensions)) => {
+				let caller = lookup.lookup(signed)?;
+				let mut checked_extensions: Vec<CheckedTxExtension<AccountId, Extra>> = Default::default();
+				let mut is_fee_payer_included = false;
+				let raw_payload = SignedPayload::new(self.function.clone(), extra)?;
+				if let Some(unchecked_extensions) = maybe_unchecked_extensions {
+					if unchecked_extensions.len() as u8 > MAX_UNCHECKED_EXTENSION {
+						return Err(InvalidTransaction::Call.into());
+					}
+					for ext in unchecked_extensions {
+						match ext {
+							UncheckedTxExtension::FeePayer(maybe_addr_and_sig_and_extra) =>
+								match maybe_addr_and_sig_and_extra {
+									Some((addr, sig, extra)) => {
+										if !is_fee_payer_included {
+											log::trace!(target: "runtime::unchecked", " 😎 Extra => {:?}", extra);
+											let fee_payer = lookup.lookup(addr)?;
+											let raw_payload = SignedPayload::new(self.function.clone(), extra.clone())?;
+											if !raw_payload.using_encoded(|payload| {
+												sig.verify(payload, &fee_payer)
+											}) {
+												return Err(InvalidTransaction::BadFeePayer.into())
+											}
+											checked_extensions
+												.push(CheckedTxExtension::FeePayer((fee_payer, extra)));
+											is_fee_payer_included = true;
+										}
+									},
+									None => return Err(InvalidTransaction::BadSigner.into()),
+								},
+						}
+					}
+				}
+				if !raw_payload.using_encoded(|payload| signature.verify(payload, &caller)) {
 					return Err(InvalidTransaction::BadProof.into())
 				}
-
+				let maybe_checked_extensions =
+					if checked_extensions.is_empty() { None } else { Some(checked_extensions) };
 				let (function, extra, _) = raw_payload.deconstruct();
-				CheckedExtrinsic { signed: Some((signed, extra)), function }
+				CheckedExtrinsic {
+					signed: Some((caller, extra)),
+					maybe_extensions: maybe_checked_extensions,
+					function,
+				}
 			},
-			None => CheckedExtrinsic { signed: None, function: self.function },
+			None =>
+				CheckedExtrinsic { signed: None, maybe_extensions: None, function: self.function },
 		})
 	}
 
@@ -445,6 +495,7 @@ mod tests {
 			TEST_ACCOUNT,
 			TestSig(TEST_ACCOUNT, (vec![0u8; 0], TestExtra).encode()),
 			TestExtra,
+			None,
 		);
 		let encoded = ux.encode();
 		assert_eq!(Ex::decode(&mut &encoded[..]), Ok(ux));
@@ -460,6 +511,7 @@ mod tests {
 				(vec![0u8; 257], TestExtra).using_encoded(blake2_256)[..].to_owned(),
 			),
 			TestExtra,
+			None,
 		);
 		let encoded = ux.encode();
 		assert_eq!(Ex::decode(&mut &encoded[..]), Ok(ux));
@@ -479,6 +531,7 @@ mod tests {
 			TEST_ACCOUNT,
 			TestSig(TEST_ACCOUNT, vec![0u8; 0]),
 			TestExtra,
+			None,
 		);
 		assert!(ux.is_signed().unwrap_or(false));
 		assert_eq!(
@@ -494,11 +547,16 @@ mod tests {
 			TEST_ACCOUNT,
 			TestSig(TEST_ACCOUNT, (vec![0u8; 0], TestExtra).encode()),
 			TestExtra,
+			None,
 		);
 		assert!(ux.is_signed().unwrap_or(false));
 		assert_eq!(
 			<Ex as Checkable<TestContext>>::check(ux, &Default::default()),
-			Ok(CEx { signed: Some((TEST_ACCOUNT, TestExtra)), function: vec![0u8; 0] }),
+			Ok(CEx {
+				signed: Some((TEST_ACCOUNT, TestExtra)),
+				maybe_extensions: None,
+				function: vec![0u8; 0]
+			}),
 		);
 	}
 

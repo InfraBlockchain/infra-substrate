@@ -25,6 +25,12 @@ use crate::{
 	},
 	transaction_validity::{TransactionSource, TransactionValidity},
 };
+use sp_std::vec::Vec;
+
+#[derive(PartialEq, Eq, Clone, sp_core::RuntimeDebug)]
+pub enum CheckedTxExtension<AccountId, Extra> {
+	FeePayer((AccountId, Extra)),
+}
 
 /// Definition of something that the external world might want to say; its
 /// existence implies that it has been checked and is good, particularly with
@@ -34,6 +40,8 @@ pub struct CheckedExtrinsic<AccountId, Call, Extra> {
 	/// Who this purports to be from and the number of extrinsics have come before
 	/// from the same signer, if anyone (note this is not a signature).
 	pub signed: Option<(AccountId, Extra)>,
+
+	pub maybe_extensions: Option<Vec<CheckedTxExtension<AccountId, Extra>>>,
 
 	/// The function that should be called.
 	pub function: Call,
@@ -71,15 +79,34 @@ where
 		info: &DispatchInfoOf<Self::Call>,
 		len: usize,
 	) -> crate::ApplyExtrinsicResultWithInfo<PostDispatchInfoOf<Self::Call>> {
-		let (maybe_who, maybe_pre) = if let Some((id, extra)) = self.signed {
-			let pre = Extra::pre_dispatch(extra, &id, &self.function, info, len)?;
-			(Some(id), Some(pre))
+		let (maybe_caller, maybe_pre) = if let Some((caller, extra)) = self.signed {
+			let mut maybe_fee_payer_pre: Option<<Extra as SignedExtension>::Pre> = None;
+			let mut is_fee_payer: bool = true;
+			match self.maybe_extensions {
+				Some(extensions) =>
+					for ext in extensions {
+						match ext {
+							CheckedTxExtension::FeePayer((fee_payer, fee_payer_extra)) => {
+								log::trace!(target: "runtime::chekced", "✅ Fee Payer => {:?}", fee_payer);
+								let pre = Extra::pre_dispatch(fee_payer_extra, &fee_payer, true, &self.function, info, len)?;
+								is_fee_payer = false;
+								// If there is fee payer, change caller's `Pre` to None.
+								maybe_fee_payer_pre = Some(pre);
+							},
+						}
+					},
+				None => (),
+			}
+			// let payer = fee_payer.or(Some(caller.clone())).expect("There should be account to pay a fee");
+			let pre = Extra::pre_dispatch(extra, &caller, is_fee_payer, &self.function, info, len)?;
+			let maybe_pre = maybe_fee_payer_pre.or_else(|| Some(pre));
+			(Some(caller), maybe_pre)
 		} else {
 			Extra::pre_dispatch_unsigned(&self.function, info, len)?;
 			U::pre_dispatch(&self.function)?;
 			(None, None)
 		};
-		let res = self.function.dispatch(RuntimeOrigin::from(maybe_who));
+		let res = self.function.dispatch(RuntimeOrigin::from(maybe_caller));
 		let post_info = match res {
 			Ok(info) => info,
 			Err(err) => err.post_info,
