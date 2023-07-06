@@ -46,7 +46,7 @@ sp-version = { version = "5.0.0", default-features = false, path = "../../../pri
 # InfraBlockchain related
 pallet-system-token = { version = "0.1.0", default-features = false, path = "../../../frame/system-token" }
 pallet-system-token-payment = { version = "0.1.0", default-features = false, path = "../../../frame/transaction-payment/system-token-payment/" }
-
+pallet-validator-election = { version = "0.1.0", default-features = false, path = "../../../frame/validator-election" }
 
 # Used for the node template's RPCs
 frame-system-rpc-runtime-api = { version = "4.0.0-dev", default-features = false, path = "../../../frame/system/rpc/runtime-api/" }
@@ -87,6 +87,7 @@ std = [
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
 	"pallet-system-token-payment/std",
+	"pallet-validator-election/std",
 	"sp-api/std",
 	"sp-block-builder/std",
 	"sp-consensus-aura/std",

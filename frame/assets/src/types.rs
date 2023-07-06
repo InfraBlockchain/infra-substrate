@@ -252,12 +252,17 @@ where
 		let asset = Asset::<T, I>::get(asset_id).ok_or(ConversionError::AssetMissing)?;
 		// only sufficient assets have a min balance with reliable value
 		ensure!(asset.is_sufficient, ConversionError::AssetNotSufficient);
-		let min_balance = CON::convert(F::minimum_balance());
+		// ToDo 
+		// 1. Acutal min ratio should be handled!
+		// 2. CON should be handled. Now it is Balance pallet
+		// 
+		// let min_balance = CON::convert(F::minimum_balance());
 		// make sure we don't divide by zero
-		ensure!(!min_balance.is_zero(), ConversionError::MinBalanceZero);
+		// ensure!(!min_balance.is_zero(), ConversionError::MinBalanceZero);
 		let balance = CON::convert(balance);
-		// balance * asset.min_balance / min_balance
-		Ok(FixedU128::saturating_from_rational(asset.min_balance, min_balance)
+		// balance * asset.min_balance / min_balance(1_000_000)
+		// ToDo: Divisor should be changed based on the decimals 
+		Ok(FixedU128::saturating_from_rational(asset.min_balance, 1_000_000u128)
 			.saturating_mul_int(balance))
 	}
 }

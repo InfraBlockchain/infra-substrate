@@ -20,7 +20,7 @@ use frame_support::{
 	dispatch::DispatchClass,
 	pallet_prelude::*,
 	parameter_types,
-	traits::{pot::VotingHandler, AsEnsureOriginWithArg, ConstU32, ConstU64, ConstU8, FindAuthor},
+	traits::{AsEnsureOriginWithArg, ConstU32, ConstU64, ConstU8, FindAuthor},
 	weights::{Weight, WeightToFee as WeightToFeeT},
 	ConsensusEngineId,
 };
@@ -30,8 +30,7 @@ use pallet_transaction_payment::CurrencyAdapter;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, ConvertInto, IdentityLookup, SaturatedConversion},
-	types::{SystemTokenId, VoteAssetId, VoteWeight},
+	traits::{BlakeTwo256, ConvertInto, IdentityLookup, SaturatedConversion}
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;

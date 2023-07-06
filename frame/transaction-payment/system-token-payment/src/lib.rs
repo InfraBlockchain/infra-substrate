@@ -227,8 +227,6 @@ where
 				)
 				.map(|i| (fee, InitialPayment::Asset(i.into())))
 			} else {
-				// ToDo: When system token id is not specified, the larget system tokens that caller
-				// hold will be used. Right now, it is just return Error
 				T::OnChargeSystemToken::withdraw_fee(
 					who,
 					call,

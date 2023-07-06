@@ -152,13 +152,13 @@ fn testnet_genesis(
 				99,                                                   // asset_id
 				get_account_id_from_seed::<sr25519::Public>("Alice"), // owner
 				true,                                                 // is_sufficient
-				1000,                                                 // min_balance
+				1,                                    			      // min_balance(= 0.01 iTest)
 			)],
-			metadata: vec![(99, "iTEST".into(), "iTEST".into(), 12)],
+			metadata: vec![(99, "iTEST".into(), "iTEST".into(), 2)],
 			accounts: vec![(
 				99,
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
-				1_000_000_000_000_000_000_000, // 1_000_000_000 iTEST
+				100_000_000_000, // 1_000_000_000 iTEST
 			)],
 			..Default::default()
 		},
@@ -167,5 +167,6 @@ fn testnet_genesis(
 			key: Some(root_key),
 		},
 		transaction_payment: Default::default(),
+		validator_election: Default::default(),
 	}
 }

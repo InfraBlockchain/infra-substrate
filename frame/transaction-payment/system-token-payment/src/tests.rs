@@ -139,7 +139,7 @@ fn transaction_payment_in_asset_possible() {
 			// existential deposit
 			let fee = (base_weight + weight + len as u64) * min_balance / ExistentialDeposit::get();
 
-			let pre = ChargeSystemToken::<Runtime>::from(0, Some(asset_id), None)
+			let pre = ChargeSystemToken::<Runtime>::from(0, None, None)
 				.pre_dispatch(&caller, CALL, &info_from_weight(Weight::from_parts(weight, 0)), len)
 				.unwrap();
 
