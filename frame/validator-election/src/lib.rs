@@ -213,6 +213,8 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// Points has been added for candidate validator
 		VotePointsAdded { who: T::InfraVoteAccountId },
+		/// Total number of validators has been changed 
+		TotalValidatorsNumChanged { old: u32, new: u32 },
 		/// Number of seed trust validators has been changed
 		SeedTrustNumChanged { old: u32, new: u32 },
 		/// Seed trust validator has been added to the pool
@@ -240,6 +242,8 @@ pub mod pallet {
 	pub enum Error<T> {
 		SeedTrustExceedMaxValidators,
 		NotActiveValidator,
+		/// Some parameters for transaction are bad
+		BadTransactionParams
 	}
 
 	/// The current era index.
@@ -293,42 +297,24 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		// Number of seed trust validators can be set by root(Governance)
+
 		#[pallet::call_index(0)]
 		#[pallet::weight(0)]
-		// Need actual weight
-		pub fn set_seed_trust_validators_num(
+		pub fn set_number_of_validators(
 			origin: OriginFor<T>,
-			num_validators: u32,
+			new_total: u32,
+			new_seed_trust_num: u32
 		) -> DispatchResult {
 			// Only root can call
 			ensure_root(origin)?;
-			// Seed Trust validators number should be less than max validators
-			ensure!(
-				num_validators <= TotalNumberOfValidators::<T>::get(),
-				Error::<T>::SeedTrustExceedMaxValidators
-			);
-			let old = NumberOfSeedTrustValidators::<T>::get();
-			NumberOfSeedTrustValidators::<T>::put(num_validators);
-			Self::deposit_event(Event::<T>::SeedTrustNumChanged { old, new: num_validators });
+			ensure!(new_total >= new_seed_trust_num, Error::<T>::SeedTrustExceedMaxValidators);
+			let total_num = TotalNumberOfValidators::<T>::get();
+			let seed_trust_num = NumberOfSeedTrustValidators::<T>::get();
+			Self::do_set_number_of_validator(total_num, new_total, seed_trust_num, new_seed_trust_num);
 			Ok(())
 		}
 
 		#[pallet::call_index(1)]
-		#[pallet::weight(0)]
-		pub fn set_total_number_of_validators(
-			origin: OriginFor<T>,
-			num_validators: u32,
-		) -> DispatchResult {
-			// Only root can call
-			ensure_root(origin)?;
-			let num_seed_trust = NumberOfSeedTrustValidators::<T>::get();
-			ensure!(num_validators >= num_seed_trust, Error::<T>::SeedTrustExceedMaxValidators);
-			TotalNumberOfValidators::<T>::put(num_validators);
-			Ok(())
-		}
-
-		#[pallet::call_index(2)]
 		#[pallet::weight(0)]
 		pub fn add_seed_trust_validator(origin: OriginFor<T>, who: T::AccountId) -> DispatchResult {
 			// Only root can call
@@ -340,7 +326,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(3)]
+		#[pallet::call_index(2)]
 		#[pallet::weight(0)]
 		pub fn set_min_vote_weight_threshold(
 			origin: OriginFor<T>,

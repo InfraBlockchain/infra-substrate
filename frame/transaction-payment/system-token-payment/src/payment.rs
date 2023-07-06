@@ -132,7 +132,7 @@ where
 			asset_id
 		} else {
 			let system_token_asset_list = T::Assets::token_list()
-				.ok_or(TransactionValidityError::from(InvalidTransaction::Payment))?;
+				.ok_or(TransactionValidityError::from(InvalidTransaction::SystemTokenMissing))?;
 			pallet_assets::Pallet::<T>::get_most_account_balance(
 				system_token_asset_list,
 				who.clone(),

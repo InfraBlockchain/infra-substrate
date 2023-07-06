@@ -44,7 +44,7 @@ fn pot_works() {
 			// Scenario 1
 			// Gensis state
 			assert_eq!(SeedTrustNum::<TestRuntime>::get(), 3);
-			assert_ok!(InfraVoting::set_seed_trust_validators_num(TestOrigin::root(), 2));
+			assert_ok!(InfraVoting::set_number_of_validators(TestOrigin::root(), 0, 0));
 			assert_eq!(SeedTrustNum::<TestRuntime>::get(), 2);
 			assert_eq!(PotValidatorPool::<TestRuntime>::get().counts(), 2);
 			assert_eq!(

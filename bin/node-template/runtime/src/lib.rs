@@ -333,6 +333,23 @@ impl pallet_authorship::Config for Runtime {
 	type EventHandler = ();
 }
 
+use sp_runtime::types::{VoteAccountId, VoteWeight};
+
+parameter_types! {
+	pub const SessionsPerEra: u32 = 5;
+}
+
+impl pallet_validator_election::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type SessionsPerEra = SessionsPerEra;
+	type InfraVoteAccountId = VoteAccountId;
+	type InfraVotePoints = VoteWeight;
+	type NextNewSession = ();
+	type SessionInterface = ();
+	type CollectiveInterface = ();
+	type RewardInterface = ();
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub struct Runtime
@@ -352,6 +369,7 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment,
 		SystemTokenPayment: pallet_system_token_payment,
 		SystemToken: pallet_system_token,
+		ValidatorElection: pallet_validator_election,
 		Sudo: pallet_sudo,
 		TemplateModule: pallet_template,
 	}
