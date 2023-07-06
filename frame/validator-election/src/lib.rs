@@ -211,7 +211,7 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// Points has been added for candidate validator
 		VotePointsAdded { who: T::InfraVoteAccountId },
-		/// Total number of validators has been changed 
+		/// Total number of validators has been changed
 		TotalValidatorsNumChanged { old: u32, new: u32 },
 		/// Number of seed trust validators has been changed
 		SeedTrustNumChanged { old: u32, new: u32 },
@@ -241,7 +241,7 @@ pub mod pallet {
 		SeedTrustExceedMaxValidators,
 		NotActiveValidator,
 		/// Some parameters for transaction are bad
-		BadTransactionParams
+		BadTransactionParams,
 	}
 
 	/// The current era index.
@@ -295,20 +295,24 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-
 		#[pallet::call_index(0)]
 		#[pallet::weight(0)]
 		pub fn set_number_of_validators(
 			origin: OriginFor<T>,
 			new_total: u32,
-			new_seed_trust_num: u32
+			new_seed_trust_num: u32,
 		) -> DispatchResult {
 			// Only root can call
 			ensure_root(origin)?;
 			ensure!(new_total >= new_seed_trust_num, Error::<T>::SeedTrustExceedMaxValidators);
 			let total_num = TotalNumberOfValidators::<T>::get();
 			let seed_trust_num = NumberOfSeedTrustValidators::<T>::get();
-			Self::do_set_number_of_validator(total_num, new_total, seed_trust_num, new_seed_trust_num);
+			Self::do_set_number_of_validator(
+				total_num,
+				new_total,
+				seed_trust_num,
+				new_seed_trust_num,
+			);
 			Ok(())
 		}
 

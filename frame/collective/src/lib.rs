@@ -184,10 +184,9 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config<I: 'static = ()>: frame_system::Config {
-
 		/// The runtime event type.
 		type RuntimeEvent: From<Event<Self, I>>
-		+ IsType<<Self as frame_system::Config>::RuntimeEvent>;
+			+ IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// The runtime origin type.
 		type RuntimeOrigin: From<RawOrigin<Self::AccountId, I>>;
@@ -289,12 +288,8 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config<I>, I: 'static = ()> {
-
 		/// Collective members have been changed due to new Session
-		MembersChanged {
-			old: Vec<T::AccountId>,
-			new: Vec<T::AccountId>,
-		},
+		MembersChanged { old: Vec<T::AccountId>, new: Vec<T::AccountId> },
 		/// A motion (given hash) has been proposed (by given account) with a threshold (given
 		/// `MemberCount`).
 		Proposed {
@@ -351,7 +346,6 @@ pub mod pallet {
 	// Note that councillor operations are assigned to the operational class.
 	#[pallet::call]
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
-
 		/// Dispatch a proposal from a member using the `Member` origin.
 		///
 		/// Origin must be a member of the collective.
@@ -857,9 +851,7 @@ impl<T: Config<I>, I: 'static> CollectiveInterface<T::AccountId> for Pallet<T, I
 	fn set_new_members(new: Vec<T::AccountId>) {
 		let old = Members::<T, I>::get();
 		Members::<T, I>::put(&new);
-		Self::deposit_event(
-			Event::MembersChanged { old, new }
-		);
+		Self::deposit_event(Event::MembersChanged { old, new });
 	}
 }
 

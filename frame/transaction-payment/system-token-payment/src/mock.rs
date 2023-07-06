@@ -30,7 +30,7 @@ use pallet_transaction_payment::CurrencyAdapter;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, ConvertInto, IdentityLookup, SaturatedConversion}
+	traits::{BlakeTwo256, ConvertInto, IdentityLookup, SaturatedConversion},
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;

@@ -290,7 +290,12 @@ impl<T: Config> Pallet<T> {
 		Self::deposit_event(Event::<T>::ForceEra { mode });
 	}
 
-	pub fn do_set_number_of_validator(old_total: u32, new_total: u32, old_seed_trust: u32, new_seed_trust: u32) {
+	pub fn do_set_number_of_validator(
+		old_total: u32,
+		new_total: u32,
+		old_seed_trust: u32,
+		new_seed_trust: u32,
+	) {
 		let mut is_total_num_changed: bool = false;
 		let mut is_seed_trust_num_changed: bool = false;
 		if new_total != old_total {
@@ -301,21 +306,17 @@ impl<T: Config> Pallet<T> {
 		}
 		if is_seed_trust_num_changed {
 			NumberOfSeedTrustValidators::<T>::put(new_seed_trust);
-			Self::deposit_event(
-				Event::<T>::SeedTrustNumChanged {
-					old: old_seed_trust,
-					new: new_seed_trust
-				}
-			);
+			Self::deposit_event(Event::<T>::SeedTrustNumChanged {
+				old: old_seed_trust,
+				new: new_seed_trust,
+			});
 		}
 		if is_total_num_changed {
 			TotalNumberOfValidators::<T>::put(new_total);
-			Self::deposit_event(
-				Event::<T>::TotalValidatorsNumChanged { 
-					old: old_total, 
-					new: new_total 
-				}
-			);
+			Self::deposit_event(Event::<T>::TotalValidatorsNumChanged {
+				old: old_total,
+				new: new_total,
+			});
 		}
 	}
 }

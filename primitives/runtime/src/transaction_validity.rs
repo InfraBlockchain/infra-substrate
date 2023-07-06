@@ -115,7 +115,7 @@ impl From<InvalidTransaction> for &'static str {
 				"Transaction dispatch is mandatory; transactions must not be validated.",
 			InvalidTransaction::Custom(_) => "InvalidTransaction custom error",
 			InvalidTransaction::BadSigner => "Invalid signing address",
-			InvalidTransaction::SystemTokenMissing => "System Token has not been registered"
+			InvalidTransaction::SystemTokenMissing => "System Token has not been registered",
 		}
 	}
 }

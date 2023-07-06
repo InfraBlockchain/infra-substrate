@@ -228,15 +228,11 @@ pub mod pallet {
 		/// Remove sudo key
 		#[pallet::call_index(3)]
 		#[pallet::weight(1000)]
-		pub fn remove_key(
-			origin: OriginFor<T>,
-		) -> DispatchResultWithPostInfo {
+		pub fn remove_key(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 			ensure!(Self::key().map_or(false, |k| sender == k), Error::<T>::RequireSudo);
 			Key::<T>::kill();
-			Self::deposit_event(
-				Event::<T>::SudoKeyRemoved
-			);
+			Self::deposit_event(Event::<T>::SudoKeyRemoved);
 			Ok(Pays::No.into())
 		}
 	}
