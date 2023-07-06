@@ -152,7 +152,7 @@ fn testnet_genesis(
 				99,                                                   // asset_id
 				get_account_id_from_seed::<sr25519::Public>("Alice"), // owner
 				true,                                                 // is_sufficient
-				1,                                    			      // min_balance(= 0.01 iTest)
+				1,                                                    // min_balance(= 0.01 iTest)
 			)],
 			metadata: vec![(99, "iTEST".into(), "iTEST".into(), 2)],
 			accounts: vec![(
