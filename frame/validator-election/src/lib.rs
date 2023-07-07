@@ -41,6 +41,22 @@ macro_rules! log {
 	};
 }
 
+/// Compose of validator pool
+#[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
+pub enum Pool {
+	// Seed Trust & PoT validators will be elected
+	All,
+	// Only Seed Trust validators will be elected
+	SeedTrust,
+}
+
+impl Default for Pool {
+	fn default() -> Self {
+		Pool::All
+	}
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 pub enum Forcing {
@@ -236,12 +252,16 @@ pub mod pallet {
 		ForceEra { mode: Forcing },
 		/// New era has triggered
 		NewEraTriggered { era_index: EraIndex },
+		/// New pool status has been set
+		PoolStatusSet { status: Pool }
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
+		/// Total validators num should be greater or equal to number of current validators
+		LessThanCurrentValidatorsNum,
+		/// Number of seed trust validators should be less or equal to total number of validators
 		SeedTrustExceedMaxValidators,
-		NotActiveValidator,
 		/// Some parameters for transaction are bad
 		BadTransactionParams,
 	}
@@ -290,10 +310,15 @@ pub mod pallet {
 	pub type StartSessionIndexPerEra<T: Config> =
 		StorageMap<_, Twox64Concat, EraIndex, SessionIndex, OptionQuery>;
 
-	/// Mode of era forcing.
+	/// Mode of era forcing
 	#[pallet::storage]
 	#[pallet::getter(fn force_era)]
 	pub type ForceEra<T> = StorageValue<_, Forcing, ValueQuery>;
+
+	/// Mode of validator pool
+	#[pallet::storage]
+	#[pallet::getter(fn pool_status)]
+	pub type PoolStatus<T> = StorageValue<_, Pool, ValueQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -304,9 +329,9 @@ pub mod pallet {
 			new_total: u32,
 			new_seed_trust_num: u32,
 		) -> DispatchResult {
-			// Only root can call
 			ensure_root(origin)?;
 			ensure!(new_total >= new_seed_trust_num, Error::<T>::SeedTrustExceedMaxValidators);
+			ensure!(new_total >= T::SessionInterface::validators().len() as u32, Error::<T>::LessThanCurrentValidatorsNum);
 			let total_num = TotalNumberOfValidators::<T>::get();
 			let seed_trust_num = NumberOfSeedTrustValidators::<T>::get();
 			Self::do_set_number_of_validator(
@@ -315,18 +340,19 @@ pub mod pallet {
 				seed_trust_num,
 				new_seed_trust_num,
 			);
+
 			Ok(())
 		}
 
 		#[pallet::call_index(1)]
 		#[pallet::weight(0)]
 		pub fn add_seed_trust_validator(origin: OriginFor<T>, who: T::AccountId) -> DispatchResult {
-			// Only root can call
 			ensure_root(origin)?;
 			let mut seed_trust_validators = SeedTrustValidatorPool::<T>::get();
 			seed_trust_validators.push(who.clone());
 			SeedTrustValidatorPool::<T>::put(seed_trust_validators);
 			Self::deposit_event(Event::<T>::SeedTrustAdded { who });
+
 			Ok(())
 		}
 
@@ -336,11 +362,26 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			new: T::InfraVotePoints,
 		) -> DispatchResult {
-			// Only root can call
 			ensure_root(origin)?;
 			let old = MinVotePointsThreshold::<T>::get();
 			MinVotePointsThreshold::<T>::put(new);
 			Self::deposit_event(Event::<T>::MinVotePointsChanged { old, new });
+
+			Ok(())
+		}
+
+		#[pallet::call_index(3)]
+		#[pallet::weight(0)]
+		pub fn set_pool_status(
+			origin: OriginFor<T>,
+			status: Pool
+		) -> DispatchResult {
+			
+			ensure_root(origin)?;
+			PoolStatus::<T>::put(status);
+			Self::deposit_event(
+				Event::<T>::PoolStatusSet { status }
+			);
 
 			Ok(())
 		}

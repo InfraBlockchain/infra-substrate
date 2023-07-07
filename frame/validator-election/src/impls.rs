@@ -227,7 +227,7 @@ impl<T: Config> Pallet<T> {
 		let mut pot_enabled = false;
 		let mut new_validators: Vec<T::AccountId> =
 			Self::do_elect_seed_trust_validators(num_seed_trust);
-		if num_pot != 0 {
+		if num_pot != 0 && matches!(Self::pool_status(), Pool::All) {
 			let mut pot_validators = Self::do_elect_pot_validators(era_index, num_pot);
 			pot_enabled = true;
 			new_validators.append(&mut pot_validators);
