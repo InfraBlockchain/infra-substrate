@@ -187,6 +187,7 @@ pub mod pallet {
 		pub total_number_of_validators: u32,
 		pub number_of_seed_trust_validators: u32,
 		pub force_era: Forcing,
+		pub pool_status: Pool,
 		pub is_pot_enable_at_genesis: bool,
 		pub vote_status_at_genesis: Vec<(T::InfraVoteAccountId, T::InfraVotePoints)>,
 	}
@@ -200,6 +201,7 @@ pub mod pallet {
 				total_number_of_validators: Default::default(),
 				number_of_seed_trust_validators: Default::default(),
 				force_era: Default::default(),
+				pool_status: Default::default(),
 				vote_status_at_genesis: Default::default(),
 			}
 		}
@@ -213,6 +215,7 @@ pub mod pallet {
 			TotalNumberOfValidators::<T>::put(self.total_number_of_validators.clone());
 			NumberOfSeedTrustValidators::<T>::put(self.number_of_seed_trust_validators.clone());
 			ForceEra::<T>::put(self.force_era);
+			PoolStatus::<T>::put(self.pool_status);
 			if self.is_pot_enable_at_genesis {
 				assert!(self.vote_status_at_genesis.len() > 0, "Vote status should not be empty");
 				let mut vote_status = VotingStatus::<T>::default();
@@ -253,7 +256,7 @@ pub mod pallet {
 		/// New era has triggered
 		NewEraTriggered { era_index: EraIndex },
 		/// New pool status has been set
-		PoolStatusSet { status: Pool }
+		PoolStatusSet { status: Pool },
 	}
 
 	#[pallet::error]
@@ -331,7 +334,10 @@ pub mod pallet {
 		) -> DispatchResult {
 			ensure_root(origin)?;
 			ensure!(new_total >= new_seed_trust_num, Error::<T>::SeedTrustExceedMaxValidators);
-			ensure!(new_total >= T::SessionInterface::validators().len() as u32, Error::<T>::LessThanCurrentValidatorsNum);
+			ensure!(
+				new_total >= T::SessionInterface::validators().len() as u32,
+				Error::<T>::LessThanCurrentValidatorsNum
+			);
 			let total_num = TotalNumberOfValidators::<T>::get();
 			let seed_trust_num = NumberOfSeedTrustValidators::<T>::get();
 			Self::do_set_number_of_validator(
@@ -372,16 +378,10 @@ pub mod pallet {
 
 		#[pallet::call_index(3)]
 		#[pallet::weight(0)]
-		pub fn set_pool_status(
-			origin: OriginFor<T>,
-			status: Pool
-		) -> DispatchResult {
-			
+		pub fn set_pool_status(origin: OriginFor<T>, status: Pool) -> DispatchResult {
 			ensure_root(origin)?;
 			PoolStatus::<T>::put(status);
-			Self::deposit_event(
-				Event::<T>::PoolStatusSet { status }
-			);
+			Self::deposit_event(Event::<T>::PoolStatusSet { status });
 
 			Ok(())
 		}
