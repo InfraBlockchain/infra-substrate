@@ -1708,6 +1708,7 @@ pub mod pallet {
 			decimals: u8,
 			is_frozen: bool,
 			system_token_id: SystemTokenId,
+			asset_link_parents: u8,
 		) -> DispatchResult {
 			T::ForceOrigin::ensure_origin(origin.clone())?;
 			let owner = T::Lookup::lookup(owner)?;
@@ -1722,7 +1723,7 @@ pub mod pallet {
 			let _ = Self::do_force_create(id, owner, is_sufficient, min_balance);
 			ensure!(Asset::<T, I>::contains_key(id), Error::<T, I>::Unknown);
 
-			T::AssetLink::link_system_token(id, system_token_id)?;
+			T::AssetLink::link_system_token(asset_link_parents, id, system_token_id)?;
 
 			Metadata::<T, I>::try_mutate_exists(id, |metadata| {
 				let deposit = metadata.take().map_or(Zero::zero(), |m| m.deposit);
@@ -1748,12 +1749,20 @@ pub mod pallet {
 }
 
 pub trait AssetLinkInterface<AssetId> {
-	fn link_system_token(asset_id: AssetId, system_token_id: SystemTokenId) -> DispatchResult;
+	fn link_system_token(
+		parents: u8,
+		asset_id: AssetId,
+		system_token_id: SystemTokenId,
+	) -> DispatchResult;
 	fn unlink_system_token(asset_id: AssetId) -> DispatchResult;
 }
 
 impl<AssetId> AssetLinkInterface<AssetId> for () {
-	fn link_system_token(_asset_id: AssetId, _system_token_id: SystemTokenId) -> DispatchResult {
+	fn link_system_token(
+		_parents: u8,
+		_asset_id: AssetId,
+		_system_token_id: SystemTokenId,
+	) -> DispatchResult {
 		Ok(())
 	}
 	fn unlink_system_token(_asset_id: AssetId) -> DispatchResult {
