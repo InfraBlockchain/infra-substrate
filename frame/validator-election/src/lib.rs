@@ -53,7 +53,7 @@ pub enum Pool {
 
 impl Default for Pool {
 	fn default() -> Self {
-		Pool::All
+		Pool::SeedTrust
 	}
 }
 
