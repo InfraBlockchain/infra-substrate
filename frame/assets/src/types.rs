@@ -69,6 +69,8 @@ pub struct AssetDetails<Balance, AccountId, DepositBalance> {
 	pub(super) approvals: u32,
 	/// The status of the asset
 	pub(super) status: AssetStatus,
+	/// The system token weight compared with iUSD.
+	pub(super) system_token_weight: u128,
 }
 
 /// Data concerning an approval.
@@ -262,7 +264,7 @@ where
 		let balance = CON::convert(balance);
 		// balance * asset.min_balance / min_balance(1_000_000)
 		// ToDo: Divisor should be changed based on the decimals
-		Ok(FixedU128::saturating_from_rational(asset.min_balance, 1_000_000u128)
+		Ok(FixedU128::saturating_from_rational(1, asset.system_token_weight)
 			.saturating_mul_int(balance))
 	}
 }

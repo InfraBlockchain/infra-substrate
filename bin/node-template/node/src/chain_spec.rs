@@ -154,7 +154,7 @@ fn testnet_genesis(
 				true,                                                 // is_sufficient
 				1,                                                    // min_balance(= 0.01 iTest)
 			)],
-			metadata: vec![(99, "iTEST".into(), "iTEST".into(), 2)],
+			metadata: vec![(99, "iUSD".into(), "iUSD".into(), 5)],
 			accounts: vec![(
 				99,
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
