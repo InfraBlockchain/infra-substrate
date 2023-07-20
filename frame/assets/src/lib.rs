@@ -330,6 +330,11 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
+	/// The fee rate imposed to this Parachain. The fee rate 1_000 actually equals 1.
+	/// It is initilzed as 1_000(1.0), then it SHOULD be only set by a dmp call from RELAY CHAIN.
+	pub(super) type ParaFeeRate<T: Config<I>, I: 'static = ()> = StorageValue<_, u32, OptionQuery>;
+
+	#[pallet::storage]
 	/// The holdings of a specific account for a specific asset.
 	pub(super) type Account<T: Config<I>, I: 'static = ()> = StorageDoubleMap<
 		_,
@@ -388,6 +393,7 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config<I>, I: 'static> GenesisBuild<T, I> for GenesisConfig<T, I> {
 		fn build(&self) {
+			ParaFeeRate::<T, I>::set(Some(1000));
 			for (id, owner, is_sufficient, min_balance) in &self.assets {
 				assert!(!Asset::<T, I>::contains_key(id), "Asset id already in use");
 				assert!(!min_balance.is_zero(), "Min balance should not be zero");
@@ -406,7 +412,7 @@ pub mod pallet {
 						sufficients: 0,
 						approvals: 0,
 						status: AssetStatus::Live,
-						system_token_weight: 1,
+						system_token_weight: 100000,
 					},
 				);
 			}
@@ -529,8 +535,12 @@ pub mod pallet {
 		AssetMinBalanceChanged { asset_id: T::AssetId, new_min_balance: T::Balance },
 		/// The is_sufficient of an asset has been updated by the asset owner.
 		AssetIsSufficientChanged { asset_id: T::AssetId, new_is_sufficient: bool },
+		/// The is_sufficient of an asset has been updated by the asset owner.
+		AssetSystemTokenWeightChanged { asset_id: T::AssetId, system_token_weight: u64 },
 		/// No sufficient token to pay the transaciton fee
 		NoSufficientTokenToPay,
+		/// The ParaFeeRate has been updated
+		ParaFeeRateUpdated { para_fee_rate: u32 },
 	}
 
 	#[pallet::error]
@@ -1711,6 +1721,7 @@ pub mod pallet {
 			is_frozen: bool,
 			system_token_id: SystemTokenId,
 			asset_link_parents: u8,
+			system_token_weight: u64,
 		) -> DispatchResult {
 			T::ForceOrigin::ensure_origin(origin.clone())?;
 			let owner = T::Lookup::lookup(owner)?;
@@ -1722,10 +1733,14 @@ pub mod pallet {
 			let bounded_symbol: BoundedVec<u8, T::StringLimit> =
 				symbol.clone().try_into().map_err(|_| Error::<T, I>::BadMetadata)?;
 
-			let _ = Self::do_force_create(id, owner, is_sufficient, min_balance);
+			Self::do_force_create(id, owner, is_sufficient, min_balance)?;
 			ensure!(Asset::<T, I>::contains_key(id), Error::<T, I>::Unknown);
 
 			T::AssetLink::link_system_token(asset_link_parents, id, system_token_id)?;
+
+			let mut details = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
+			details.system_token_weight = system_token_weight;
+			Asset::<T, I>::insert(&id, details);
 
 			Metadata::<T, I>::try_mutate_exists(id, |metadata| {
 				let deposit = metadata.take().map_or(Zero::zero(), |m| m.deposit);
@@ -1746,6 +1761,55 @@ pub mod pallet {
 				});
 				Ok(())
 			})
+		}
+		/// Sets the system_token_weight of an AssetDetails.
+		///
+		///
+		/// Origin must be Signed and the sender has to be the root
+		///
+		/// - `id`: The identifier of the asset.
+		/// - `system_token_weight`: The new value of `system_token_weight`.
+		///
+		/// Emits `AssetSystemTokenWeightChanged` event when successful.
+		#[pallet::call_index(33)]
+		#[pallet::weight(T::WeightInfo::set_min_balance())]
+		pub fn update_system_token_weight(
+			origin: OriginFor<T>,
+			id: T::AssetIdParameter,
+			system_token_weight: u64,
+		) -> DispatchResult {
+			T::ForceOrigin::ensure_origin(origin.clone())?;
+			let id: T::AssetId = id.into();
+
+			let mut details = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
+
+			details.system_token_weight = system_token_weight;
+			Asset::<T, I>::insert(&id, details);
+
+			Self::deposit_event(Event::AssetSystemTokenWeightChanged {
+				asset_id: id,
+				system_token_weight,
+			});
+			Ok(())
+		}
+		/// Sets the system_token_weight of an AssetDetails.
+		///
+		///
+		/// Origin must be Signed and the sender has to be the root
+		///
+		/// - `id`: The identifier of the asset.
+		/// - `system_token_weight`: The new value of `system_token_weight`.
+		///
+		/// Emits `AssetSystemTokenWeightChanged` event when successful.
+		#[pallet::call_index(34)]
+		#[pallet::weight(T::WeightInfo::set_min_balance())]
+		pub fn update_para_fee_rate(origin: OriginFor<T>, para_fee_rate: u32) -> DispatchResult {
+			T::ForceOrigin::ensure_origin(origin.clone())?;
+
+			ParaFeeRate::<T, I>::set(Some(para_fee_rate));
+
+			Self::deposit_event(Event::ParaFeeRateUpdated { para_fee_rate });
+			Ok(())
 		}
 	}
 }
