@@ -29,6 +29,8 @@ pub(super) type DepositBalanceOf<T, I = ()> =
 pub(super) type AssetAccountOf<T, I> =
 	AssetAccount<<T as Config<I>>::Balance, DepositBalanceOf<T, I>, <T as Config<I>>::Extra>;
 
+const CORRECTION_PARA_FEE_RATE: u64 = 1_000;
+
 /// AssetStatus holds the current state of the asset. It could either be Live and available for use,
 /// or in a Destroying state.
 #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
@@ -70,7 +72,7 @@ pub struct AssetDetails<Balance, AccountId, DepositBalance> {
 	/// The status of the asset
 	pub(super) status: AssetStatus,
 	/// The system token weight compared with iUSD.
-	pub(super) system_token_weight: u128,
+	pub(super) system_token_weight: u64,
 }
 
 /// Data concerning an approval.
@@ -262,9 +264,15 @@ where
 		// make sure we don't divide by zero
 		// ensure!(!min_balance.is_zero(), ConversionError::MinBalanceZero);
 		let balance = CON::convert(balance);
-		// balance * asset.min_balance / min_balance(1_000_000)
+
+		let para_fee_rate = ParaFeeRate::<T, I>::get().ok_or(ConversionError::AssetMissing)?;
+
+		// balance * para_fee_rate / (system_token_weight * correction_para_fee_rate)
 		// ToDo: Divisor should be changed based on the decimals
-		Ok(FixedU128::saturating_from_rational(1, asset.system_token_weight)
-			.saturating_mul_int(balance))
+		Ok(FixedU128::saturating_from_rational(
+			para_fee_rate,
+			asset.system_token_weight * CORRECTION_PARA_FEE_RATE,
+		)
+		.saturating_mul_int(balance))
 	}
 }
