@@ -642,7 +642,7 @@ pub mod pallet {
 					sufficients: 0,
 					approvals: 0,
 					status: AssetStatus::Live,
-					system_token_weight: 1,
+					system_token_weight: 100000,
 				},
 			);
 
