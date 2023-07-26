@@ -177,6 +177,8 @@ pub use weights::WeightInfo;
 type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
 const LOG_TARGET: &str = "runtime::assets";
 
+type SystemTokenWeight = u64;
+
 /// Trait with callbacks that are executed after successfull asset creation or destruction.
 pub trait AssetsCallback<AssetId, AccountId> {
 	/// Indicates that asset with `id` was successfully created by the `owner`
@@ -1635,10 +1637,11 @@ pub mod pallet {
 		/// Emits `AssetIsSufficientChanged` event when successful.
 		#[pallet::call_index(30)]
 		#[pallet::weight(T::WeightInfo::set_min_balance())]
-		pub fn set_sufficient(
+		pub fn set_sufficient_and_system_token_weight(
 			origin: OriginFor<T>,
 			id: T::AssetIdParameter,
 			is_sufficient: bool,
+			system_token_weight: Option<SystemTokenWeight>,
 		) -> DispatchResult {
 			T::ForceOrigin::ensure_origin(origin)?;
 			let id: T::AssetId = id.into();
@@ -1646,6 +1649,11 @@ pub mod pallet {
 			let mut details = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
 
 			details.is_sufficient = is_sufficient;
+
+			if let Some(weight) = system_token_weight {
+				details.system_token_weight = weight;
+			};
+
 			Asset::<T, I>::insert(&id, details);
 
 			Self::deposit_event(Event::AssetIsSufficientChanged {
@@ -1778,7 +1786,7 @@ pub mod pallet {
 			id: T::AssetIdParameter,
 			system_token_weight: u64,
 		) -> DispatchResult {
-			T::ForceOrigin::ensure_origin(origin.clone())?;
+			T::ForceOrigin::ensure_origin(origin)?;
 			let id: T::AssetId = id.into();
 
 			let mut details = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
@@ -1804,7 +1812,7 @@ pub mod pallet {
 		#[pallet::call_index(34)]
 		#[pallet::weight(T::WeightInfo::set_min_balance())]
 		pub fn update_para_fee_rate(origin: OriginFor<T>, para_fee_rate: u32) -> DispatchResult {
-			T::ForceOrigin::ensure_origin(origin.clone())?;
+			T::ForceOrigin::ensure_origin(origin)?;
 
 			ParaFeeRate::<T, I>::set(Some(para_fee_rate));
 
