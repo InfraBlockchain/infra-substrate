@@ -291,6 +291,7 @@ impl pallet_system_token_payment::Config for Runtime {
 		pallet_assets::BalanceToAssetBalance<Balances, Runtime, ConvertInto>,
 		CreditToBucket<Runtime>,
 	>;
+	type FeeTableProvider = TemplateModule;
 	type PalletId = TxPaymentPalletId;
 	type VotingHandler = TemplateModule;
 }

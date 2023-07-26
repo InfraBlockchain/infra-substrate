@@ -5,7 +5,8 @@
 /// <https://docs.substrate.io/reference/frame-pallets/>
 pub use pallet::*;
 
-use frame_support::traits::pot::VotingHandler;
+use frame_support::traits::ibs_support::{fee::FeeTableProvider, pot::VotingHandler};
+use sp_core::H256;
 use sp_runtime::types::{PotVote, SystemTokenId, VoteAccountId, VoteWeight};
 use sp_std::vec::Vec;
 
@@ -20,7 +21,7 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config: frame_system::Config + pallet_balances::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 	}
 
@@ -60,5 +61,14 @@ impl<T: Config> Pallet<T> {
 			// Weight for the asset id not existed. Need to insert new one
 			PotVotes::<T>::put([pot_vote].to_vec());
 		}
+	}
+}
+
+impl<T: Config> FeeTableProvider<T::Balance> for Pallet<T>
+where
+	T::Balance: From<u128>,
+{
+	fn get_fee_from_fee_table(_key: sp_core::H256) -> Option<T::Balance> {
+		Some(1u128.into())
 	}
 }

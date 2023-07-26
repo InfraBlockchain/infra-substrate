@@ -14,25 +14,28 @@
 // limitations under the License.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-
-use sp_std::prelude::*;
-
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
 mod tests;
+
+mod types;
+use types::*;
+
+mod payment;
+pub use payment::*;
 
 use codec::{Decode, Encode};
 use frame_support::{
 	dispatch::{DispatchInfo, DispatchResult, PostDispatchInfo},
 	pallet_prelude::*,
 	traits::{
-		pot::VotingHandler,
+		ibs_support::{fee::FeeTableProvider, pot::VotingHandler},
 		tokens::{
 			fungibles::{Balanced, CreditOf, Inspect},
 			WithdrawConsequence,
 		},
-		IsType,
+		CallMetadata, GetCallMetadata, IsType,
 	},
 	DefaultNoBound, PalletId,
 };
@@ -40,81 +43,15 @@ use pallet_transaction_payment::OnChargeTransaction;
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{
-		AccountIdConversion, DispatchInfoOf, Dispatchable, PostDispatchInfoOf, SignedExtension,
-		Zero,
+		AccountIdConversion, BlakeTwo256, DispatchInfoOf, Dispatchable, Hash, PostDispatchInfoOf,
+		SignedExtension, Zero,
 	},
 	transaction_validity::{TransactionValidity, TransactionValidityError, ValidTransaction},
 	types::{SystemTokenId, SystemTokenLocalAssetProvider, VoteAccountId, VoteWeight},
 	FixedPointOperand,
 };
 
-mod payment;
-pub use payment::*;
-
-// Type aliases used for interaction with `OnChargeTransaction`.
-pub(crate) type OnChargeTransactionOf<T> =
-	<T as pallet_transaction_payment::Config>::OnChargeTransaction;
-// Balance type alias.
-pub(crate) type BalanceOf<T> = <OnChargeTransactionOf<T> as OnChargeTransaction<T>>::Balance;
-// Liquity info type alias.
-pub(crate) type LiquidityInfoOf<T> =
-	<OnChargeTransactionOf<T> as OnChargeTransaction<T>>::LiquidityInfo;
-
-// Type alias used for interaction with fungibles (assets).
-// Balance type alias.
-pub(crate) type AssetBalanceOf<T> =
-	<<T as Config>::Assets as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
-/// Asset id type alias.
-pub(crate) type AssetIdOf<T> =
-	<<T as Config>::Assets as Inspect<<T as frame_system::Config>::AccountId>>::AssetId;
-
-// Type aliases used for interaction with `OnChargeAssetTransaction`.
-// Balance type alias.
-pub(crate) type ChargeAssetBalanceOf<T> =
-	<<T as Config>::OnChargeSystemToken as OnChargeSystemToken<T>>::Balance;
-
-pub(crate) type ChargeSystemTokenAssetIdOf<T> =
-	<<T as Config>::OnChargeSystemToken as OnChargeSystemToken<T>>::SystemTokenAssetId;
-
-// Liquity info type alias.
-pub(crate) type ChargeAssetLiquidityOf<T> =
-	<<T as Config>::OnChargeSystemToken as OnChargeSystemToken<T>>::LiquidityInfo;
-
-#[derive(Encode, Decode, Debug, Clone, TypeInfo, PartialEq)]
-pub struct FeeDetail<SystemTokenId, Balance> {
-	system_token_id: SystemTokenId,
-	amount: Balance,
-}
-
-impl<SystemTokenId, Balance> FeeDetail<SystemTokenId, Balance> {
-	pub fn new(system_token_id: SystemTokenId, amount: Balance) -> Self {
-		Self { system_token_id, amount }
-	}
-}
-
-#[derive(Encode, Decode, Clone, Debug, TypeInfo, PartialEq)]
-pub struct VoteDetail<VoteAccountId, VoteWeight> {
-	candidate: VoteAccountId,
-	weight: VoteWeight,
-}
-
-impl<VoteAccountId, VoteWeight> VoteDetail<VoteAccountId, VoteWeight> {
-	pub fn new(candidate: VoteAccountId, weight: VoteWeight) -> Self {
-		Self { candidate, weight }
-	}
-}
-
-/// Used to pass the initial payment info from pre- to post-dispatch.
-#[derive(Encode, Decode, DefaultNoBound, TypeInfo)]
-pub enum InitialPayment<T: Config> {
-	/// No initial fee was payed.
-	#[default]
-	Nothing,
-	/// The initial fee was payed in the native currency.
-	Native(LiquidityInfoOf<T>),
-	/// The initial fee was payed in an asset.
-	Asset(CreditOf<T::AccountId, T::Assets>),
-}
+use sp_std::prelude::*;
 
 pub use pallet::*;
 
@@ -132,9 +69,11 @@ pub mod pallet {
 		type Assets: Balanced<Self::AccountId> + SystemTokenLocalAssetProvider;
 		/// The actual transaction charging logic that charges the fees.
 		type OnChargeSystemToken: OnChargeSystemToken<Self>;
-		/// The type that handles the voting info.
+		/// The type that handles the voting.
 		type VotingHandler: VotingHandler;
-		/// The Pallet ID.
+		/// The type that handles fee table.
+		type FeeTableProvider: FeeTableProvider<ChargeAssetBalanceOf<Self>>;
+		/// Id for handling fee(e.g SoverignAccount for some Runtime).
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
 	}
@@ -182,7 +121,8 @@ pub struct ChargeSystemToken<T: Config> {
 
 impl<T: Config> ChargeSystemToken<T>
 where
-	T::RuntimeCall: Dispatchable<Info = DispatchInfo, PostInfo = PostDispatchInfo>,
+	T::RuntimeCall:
+		Dispatchable<Info = DispatchInfo, PostInfo = PostDispatchInfo> + GetCallMetadata,
 	AssetBalanceOf<T>: Send + Sync + FixedPointOperand,
 	BalanceOf<T>: Send + Sync + FixedPointOperand + IsType<ChargeAssetBalanceOf<T>>,
 	ChargeSystemTokenAssetIdOf<T>: Send + Sync,
@@ -202,8 +142,11 @@ where
 		Self { tip, system_token_id, vote_candidate }
 	}
 
-	/// Fee withdrawal logic that dispatches to either `OnChargeAssetTransaction` or
-	/// `OnChargeTransaction`.
+	/// Taking fee **before dispatching transactions.**
+	/// If system token has been provided, system token will be charged.
+	/// Otherwise, Runtime will take the largest amount of system token.
+	// ToDo: Need to consider the weight of the system token when the largest amount of system token
+	// is taken!
 	fn withdraw_fee(
 		&self,
 		who: &T::AccountId,
@@ -213,6 +156,7 @@ where
 	) -> Result<(BalanceOf<T>, InitialPayment<T>), TransactionValidityError> {
 		let fee = pallet_transaction_payment::Pallet::<T>::compute_fee(len as u32, info, self.tip);
 		debug_assert!(self.tip <= fee, "tip should be included in the computed fee");
+
 		if fee.is_zero() {
 			Ok((fee, InitialPayment::Nothing))
 		} else {
@@ -239,14 +183,6 @@ where
 			}
 		}
 	}
-
-	fn do_collect_vote(
-		candidate: VoteAccountId,
-		system_token_id: SystemTokenId,
-		vote_weight: VoteWeight,
-	) {
-		T::VotingHandler::update_pot_vote(candidate.clone().into(), system_token_id, vote_weight);
-	}
 }
 
 impl<T: Config> sp_std::fmt::Debug for ChargeSystemToken<T> {
@@ -262,7 +198,8 @@ impl<T: Config> sp_std::fmt::Debug for ChargeSystemToken<T> {
 
 impl<T: Config> SignedExtension for ChargeSystemToken<T>
 where
-	T::RuntimeCall: Dispatchable<Info = DispatchInfo, PostInfo = PostDispatchInfo>,
+	T::RuntimeCall:
+		Dispatchable<Info = DispatchInfo, PostInfo = PostDispatchInfo> + GetCallMetadata,
 	AssetBalanceOf<T>: Send + Sync + FixedPointOperand + IsType<VoteWeight>,
 	BalanceOf<T>: Send + Sync + From<u64> + FixedPointOperand + IsType<ChargeAssetBalanceOf<T>>,
 	ChargeSystemTokenAssetIdOf<T>: Send + Sync,
@@ -277,6 +214,8 @@ where
 		BalanceOf<T>,
 		// who paid the fee. could be 'fee_payer' or 'user(signer)'
 		Self::AccountId,
+		// Metadata of the call. (Pallet Name, Call Name)
+		CallMetadata,
 		// imbalance resulting from withdrawing the fee
 		InitialPayment<T>,
 		// asset_id for the transaction payment
@@ -311,8 +250,15 @@ where
 		len: usize,
 	) -> Result<Self::Pre, TransactionValidityError> {
 		let (_fee, initial_payment) = self.withdraw_fee(who, call, info, len)?;
-
-		Ok((self.tip, who.clone(), initial_payment, self.system_token_id, self.vote_candidate))
+		let call_metadata = call.get_call_metadata();
+		Ok((
+			self.tip,
+			who.clone(),
+			call_metadata,
+			initial_payment,
+			self.system_token_id,
+			self.vote_candidate,
+		))
 	}
 
 	fn post_dispatch(
@@ -322,7 +268,9 @@ where
 		len: usize,
 		result: &DispatchResult,
 	) -> Result<(), TransactionValidityError> {
-		if let Some((tip, who, initial_payment, system_token_id, vote_candidate)) = pre {
+		if let Some((tip, who, call_metadata, initial_payment, system_token_id, vote_candidate)) =
+			pre
+		{
 			match initial_payment {
 				InitialPayment::Native(already_withdrawn) => {
 					pallet_transaction_payment::ChargeTransactionPayment::<T>::post_dispatch(
@@ -334,9 +282,21 @@ where
 					)?;
 				},
 				InitialPayment::Asset(already_withdrawn) => {
-					let actual_fee = pallet_transaction_payment::Pallet::<T>::compute_actual_fee(
-						len as u32, info, post_info, tip,
-					);
+					// This is default fee calculation. If some fee has been on `Fee Table`, we
+					// follow that.
+					let actual_fee: BalanceOf<T> =
+						pallet_transaction_payment::Pallet::<T>::compute_actual_fee(
+							len as u32, info, post_info, tip,
+						);
+					let hash = BlakeTwo256::hash_of(&(
+						call_metadata.pallet_name,
+						call_metadata.function_name,
+					));
+					log::info!("Hash of call metadata => {:?}", hash);
+					// let actual_fee = T::FeeTableProvider::get_fee_from_fee_table(
+					// 	call_metadata.pallet_name.into(),
+					// 	call_metadata.function_name.into(),
+					// ).map_or(actual_fee, |pre_defined_fee| pre_defined_fee.into());
 
 					let (converted_fee, converted_tip) =
 						T::OnChargeSystemToken::correct_and_deposit_fee(
@@ -365,8 +325,9 @@ where
 									converted_fee.into(),
 								)),
 							});
-							Self::do_collect_vote(
-								vote_candidate.clone(),
+							// Update vote
+							T::VotingHandler::update_pot_vote(
+								vote_candidate.clone().into(),
 								system_token_id.clone(),
 								converted_fee.into(),
 							);

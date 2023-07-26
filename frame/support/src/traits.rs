@@ -30,6 +30,8 @@ pub use tokens::{
 	nonfungible, nonfungibles, BalanceStatus, ExistenceRequirement, Locker, WithdrawReasons,
 };
 
+pub mod ibs_support;
+
 mod members;
 #[allow(deprecated)]
 pub use members::{AllowAll, DenyAll, Filter};
@@ -117,9 +119,6 @@ pub use messages::{
 	EnqueueMessage, ExecuteOverweightError, Footprint, NoopServiceQueues, ProcessMessage,
 	ProcessMessageError, ServiceQueues, TransformOrigin,
 };
-
-pub mod pot;
-pub use pot::*;
 
 #[cfg(feature = "try-runtime")]
 mod try_runtime;

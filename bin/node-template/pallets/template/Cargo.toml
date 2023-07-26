@@ -15,6 +15,8 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.2.2", default-features = false, features = ["derive"]}
 sp-runtime = { version = "7.0.0", default-features = false, path = "../../../../primitives/runtime" }
+sp-core = { version = "7.0.0", default-features= false, path = "../../../../primitives/core" }
+pallet-balances = { version = "4.0.0-dev", default-features = false, path = "../../../../frame/balances" } 
 sp-std = { version = "5.0.0", default-features = false, path = "../../../../primitives/std" }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 frame-benchmarking = { version = "4.0.0-dev", default-features = false, optional = true, path = "../../../../frame/benchmarking" }
@@ -23,7 +25,6 @@ frame-system = { version = "4.0.0-dev", default-features = false, path = "../../
 # getrandom = { version = "0.2", features = ["js"] }
 
 [dev-dependencies]
-sp-core = { version = "7.0.0", path = "../../../../primitives/core" }
 sp-io = { version = "7.0.0", path = "../../../../primitives/io" }
 
 
@@ -35,6 +36,8 @@ std = [
 	"frame-benchmarking?/std",
 	"frame-support/std",
 	"frame-system/std",
+	"pallet-balances/std",
+	"sp-core/std",
 	"scale-info/std",
 	"sp-std/std",
 ]
