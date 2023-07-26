@@ -47,7 +47,7 @@ use sp_runtime::{
 		SignedExtension, Zero,
 	},
 	transaction_validity::{TransactionValidity, TransactionValidityError, ValidTransaction},
-	types::{SystemTokenId, SystemTokenLocalAssetProvider, VoteAccountId, VoteWeight},
+	types::{SystemTokenId, SystemTokenLocalAssetProvider, VoteAccountId, VoteWeight, CallCommitment},
 	FixedPointOperand,
 };
 
@@ -266,38 +266,25 @@ where
 		info: &DispatchInfoOf<Self::Call>,
 		post_info: &PostDispatchInfoOf<Self::Call>,
 		len: usize,
-		result: &DispatchResult,
+		_result: &DispatchResult,
 	) -> Result<(), TransactionValidityError> {
 		if let Some((tip, who, call_metadata, initial_payment, system_token_id, vote_candidate)) =
 			pre
 		{
 			match initial_payment {
-				InitialPayment::Native(already_withdrawn) => {
-					pallet_transaction_payment::ChargeTransactionPayment::<T>::post_dispatch(
-						Some((tip, who, already_withdrawn)),
-						info,
-						post_info,
-						len,
-						result,
-					)?;
-				},
 				InitialPayment::Asset(already_withdrawn) => {
-					// This is default fee calculation. If some fee has been on `Fee Table`, we
-					// follow that.
-					let actual_fee: BalanceOf<T> =
+					// This is default fee calculation. 
+					// If some fee has been on `Fee Table`, we follow that.
+					let hash = CallCommitment::new(call_metadata.pallet_name, call_metadata.function_name).hash();
+					log::info!("✅ Hash of call metadata => {:?}", hash);
+					let actual_fee: BalanceOf<T> = if let Some(fee) = T::FeeTableProvider::get_fee_from_fee_table(hash) {
+						fee.into()
+					} else {
 						pallet_transaction_payment::Pallet::<T>::compute_actual_fee(
 							len as u32, info, post_info, tip,
-						);
-					let hash = BlakeTwo256::hash_of(&(
-						call_metadata.pallet_name,
-						call_metadata.function_name,
-					));
-					log::info!("Hash of call metadata => {:?}", hash);
-					// let actual_fee = T::FeeTableProvider::get_fee_from_fee_table(
-					// 	call_metadata.pallet_name.into(),
-					// 	call_metadata.function_name.into(),
-					// ).map_or(actual_fee, |pre_defined_fee| pre_defined_fee.into());
-
+						)
+					};
+					log::info!("✅ Actual fee => {:?}", actual_fee.clone());
 					let (converted_fee, converted_tip) =
 						T::OnChargeSystemToken::correct_and_deposit_fee(
 							&who,
@@ -353,6 +340,7 @@ where
 					// move ahead without adjusting the fee, though, so we do nothing.
 					debug_assert!(tip.is_zero(), "tip should be zero if initial fee was zero.");
 				},
+				_ => {}
 			}
 		}
 

@@ -69,6 +69,6 @@ where
 	T::Balance: From<u128>,
 {
 	fn get_fee_from_fee_table(_key: sp_core::H256) -> Option<T::Balance> {
-		Some(1u128.into())
+		Some(1000000000u128.into())
 	}
 }
