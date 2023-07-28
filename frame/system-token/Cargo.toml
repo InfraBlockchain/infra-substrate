@@ -19,13 +19,11 @@ codec = { package = "parity-scale-codec", version = "3.2.2", default-features = 
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 frame-support = { version = "4.0.0-dev", default-features = false, path = "../support" }
 frame-system = { version = "4.0.0-dev", default-features = false, path = "../system" }
+pallet-assets = { version = "4.0.0-dev", default-features = false, path = "../assets" }
 sp-io = { version = "7.0.0", default-features = false, path = "../../primitives/io" }
 sp-runtime = { version = "7.0.0", default-features = false, path = "../../primitives/runtime" }
 sp-std = { version = "5.0.0", default-features = false, path = "../../primitives/std" }
-
-[dev-dependencies]
-pallet-balances = { version = "4.0.0-dev", path = "../balances" }
-sp-core = { version = "7.0.0", path = "../../primitives/core" }
+sp-core = { version = "7.0.0", default-features = false, path = "../../primitives/core" }
 
 [features]
 default = ["std"]
@@ -33,9 +31,11 @@ std = [
 	"codec/std",
 	"frame-support/std",
 	"frame-system/std",
+	"pallet-assets/std",
 	"scale-info/std",
 	"sp-io/std",
 	"sp-runtime/std",
 	"sp-std/std",
+	"sp-core/std",
 ]
 try-runtime = ["frame-support/try-runtime"]

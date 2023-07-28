@@ -43,11 +43,13 @@ use pallet_transaction_payment::OnChargeTransaction;
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{
-		AccountIdConversion, DispatchInfoOf, Dispatchable, PostDispatchInfoOf,
-		SignedExtension, Zero,
+		AccountIdConversion, DispatchInfoOf, Dispatchable, PostDispatchInfoOf, SignedExtension,
+		Zero,
 	},
 	transaction_validity::{TransactionValidity, TransactionValidityError, ValidTransaction},
-	types::{SystemTokenId, SystemTokenLocalAssetProvider, VoteAccountId, VoteWeight, CallCommitment},
+	types::{
+		CallCommitment, SystemTokenId, SystemTokenLocalAssetProvider, VoteAccountId, VoteWeight,
+	},
 	FixedPointOperand,
 };
 
@@ -274,15 +276,18 @@ where
 			match initial_payment {
 				// Ibs only pay with some asset
 				InitialPayment::Asset(already_withdrawn) => {
-					let hash = CallCommitment::new(call_metadata.pallet_name, call_metadata.function_name).hash();
+					let hash =
+						CallCommitment::new(call_metadata.pallet_name, call_metadata.function_name)
+							.hash();
 					// Actual fee will be based on 'fee table' or default calculation
-					let actual_fee: BalanceOf<T> = if let Some(fee) = T::FeeTableProvider::get_fee_from_fee_table(hash) {
-						fee.into()
-					} else {
-						pallet_transaction_payment::Pallet::<T>::compute_actual_fee(
-							len as u32, info, post_info, tip,
-						)
-					};
+					let actual_fee: BalanceOf<T> =
+						if let Some(fee) = T::FeeTableProvider::get_fee_from_fee_table(hash) {
+							fee.into()
+						} else {
+							pallet_transaction_payment::Pallet::<T>::compute_actual_fee(
+								len as u32, info, post_info, tip,
+							)
+						};
 					let (converted_fee, converted_tip) =
 						T::OnChargeSystemToken::correct_and_deposit_fee(
 							&who,
@@ -296,7 +301,7 @@ where
 						if converted_tip.is_zero() { None } else { Some(converted_tip) };
 					// update_vote_info is only excuted when vote_info has some data
 					match (&vote_candidate, &system_token_id) {
-						// Case: Voting and system token has clarified 
+						// Case: Voting and system token has clarified
 						(Some(vote_candidate), Some(system_token_id)) => {
 							Pallet::<T>::deposit_event(Event::<T>::AssetTxFeePaid {
 								fee_payer: who,
@@ -340,7 +345,7 @@ where
 					// move ahead without adjusting the fee, though, so we do nothing.
 					debug_assert!(tip.is_zero(), "tip should be zero if initial fee was zero.");
 				},
-				_ => {}
+				_ => {},
 			}
 		}
 

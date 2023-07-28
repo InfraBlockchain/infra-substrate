@@ -158,8 +158,7 @@ parameter_types! {
 // Configure FRAME pallets to include in runtime.
 impl pallet_system_token::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type StringLimit = ConstU32<50>;
-	type MaxWrappedSystemToken = ConstU32<10>;
+	type AuthorizedOrigin = EnsureRoot<AccountId>;
 }
 
 impl frame_system::Config for Runtime {

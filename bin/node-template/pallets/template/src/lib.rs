@@ -6,7 +6,6 @@
 pub use pallet::*;
 
 use frame_support::traits::ibs_support::{fee::FeeTableProvider, pot::VotingHandler};
-use sp_core::H256;
 use sp_runtime::types::{PotVote, SystemTokenId, VoteAccountId, VoteWeight};
 use sp_std::vec::Vec;
 
