@@ -43,7 +43,7 @@ use pallet_transaction_payment::OnChargeTransaction;
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{
-		AccountIdConversion, BlakeTwo256, DispatchInfoOf, Dispatchable, Hash, PostDispatchInfoOf,
+		AccountIdConversion, DispatchInfoOf, Dispatchable, PostDispatchInfoOf,
 		SignedExtension, Zero,
 	},
 	transaction_validity::{TransactionValidity, TransactionValidityError, ValidTransaction},
@@ -272,11 +272,10 @@ where
 			pre
 		{
 			match initial_payment {
+				// Ibs only pay with some asset
 				InitialPayment::Asset(already_withdrawn) => {
-					// This is default fee calculation. 
-					// If some fee has been on `Fee Table`, we follow that.
 					let hash = CallCommitment::new(call_metadata.pallet_name, call_metadata.function_name).hash();
-					log::info!("✅ Hash of call metadata => {:?}", hash);
+					// Actual fee will be based on 'fee table' or default calculation
 					let actual_fee: BalanceOf<T> = if let Some(fee) = T::FeeTableProvider::get_fee_from_fee_table(hash) {
 						fee.into()
 					} else {
@@ -284,7 +283,6 @@ where
 							len as u32, info, post_info, tip,
 						)
 					};
-					log::info!("✅ Actual fee => {:?}", actual_fee.clone());
 					let (converted_fee, converted_tip) =
 						T::OnChargeSystemToken::correct_and_deposit_fee(
 							&who,
@@ -298,6 +296,7 @@ where
 						if converted_tip.is_zero() { None } else { Some(converted_tip) };
 					// update_vote_info is only excuted when vote_info has some data
 					match (&vote_candidate, &system_token_id) {
+						// Case: Voting and system token has clarified 
 						(Some(vote_candidate), Some(system_token_id)) => {
 							Pallet::<T>::deposit_event(Event::<T>::AssetTxFeePaid {
 								fee_payer: who,
@@ -319,6 +318,7 @@ where
 								converted_fee.into(),
 							);
 						},
+						// Case: No voting but system token id has clarified.
 						(None, Some(system_token_id)) =>
 							Pallet::<T>::deposit_event(Event::<T>::AssetTxFeePaid {
 								fee_payer: who,
