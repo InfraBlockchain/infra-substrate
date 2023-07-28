@@ -3,7 +3,7 @@ pub mod token;
 mod vote;
 
 pub use self::{
-	fee::CallCommitment,
+	fee::ExtrinsicMetadata,
 	token::{AssetId, PalletId, ParaId, SystemTokenId, SystemTokenLocalAssetProvider},
 	vote::{PotVote, PotVotes, PotVotesResult, VoteAccountId, VoteAssetId, VoteWeight},
 };

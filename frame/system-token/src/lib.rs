@@ -17,8 +17,9 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 use frame_support::traits::ibs_support::fee::FeeTableProvider;
+use sp_runtime::types::ExtrinsicMetadata;
 pub use pallet::*;
-use sp_core::H256;
+use sp_std::vec::Vec;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
@@ -37,7 +38,7 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Fee has been set on fee table
-		SetFeeTable { commitment: H256, fee: T::Balance },
+		SetFeeTable { metadata: ExtrinsicMetadata, fee: T::Balance },
 	}
 
 	#[pallet::pallet]
@@ -45,23 +46,25 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::storage]
-	pub type FeeTable<T: Config> = StorageMap<_, Identity, H256, T::Balance, OptionQuery>;
+	#[pallet::unbounded]
+	pub type FeeTable<T: Config> = StorageMap<_, Twox128, ExtrinsicMetadata, T::Balance, OptionQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
 		#[pallet::weight(1_000)]
-		pub fn set_fee_table(origin: OriginFor<T>, key: H256, fee: T::Balance) -> DispatchResult {
+		pub fn set_fee_table(origin: OriginFor<T>, pallet_name: Vec<u8>, call_name: Vec<u8>, fee: T::Balance) -> DispatchResult {
 			T::AuthorizedOrigin::ensure_origin(origin)?;
-			FeeTable::<T>::insert(&key, fee);
-			Self::deposit_event(Event::<T>::SetFeeTable { commitment: key, fee });
+			let extrinsic_metadata = ExtrinsicMetadata::new(pallet_name, call_name);
+			FeeTable::<T>::insert(&extrinsic_metadata, fee);
+			Self::deposit_event(Event::<T>::SetFeeTable { metadata: extrinsic_metadata, fee });
 			Ok(())
 		}
 	}
 }
 
 impl<T: Config> FeeTableProvider<T::Balance> for Pallet<T> {
-	fn get_fee_from_fee_table(key: H256) -> Option<T::Balance> {
+	fn get_fee_from_fee_table(key: ExtrinsicMetadata) -> Option<T::Balance> {
 		FeeTable::<T>::get(key)
 	}
 }

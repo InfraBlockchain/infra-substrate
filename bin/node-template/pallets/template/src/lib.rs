@@ -6,7 +6,7 @@
 pub use pallet::*;
 
 use frame_support::traits::ibs_support::{fee::FeeTableProvider, pot::VotingHandler};
-use sp_runtime::types::{PotVote, SystemTokenId, VoteAccountId, VoteWeight};
+use sp_runtime::types::{PotVote, SystemTokenId, VoteAccountId, VoteWeight, ExtrinsicMetadata};
 use sp_std::vec::Vec;
 
 #[frame_support::pallet]
@@ -67,7 +67,7 @@ impl<T: Config> FeeTableProvider<T::Balance> for Pallet<T>
 where
 	T::Balance: From<u128>,
 {
-	fn get_fee_from_fee_table(_key: sp_core::H256) -> Option<T::Balance> {
+	fn get_fee_from_fee_table(_key: ExtrinsicMetadata) -> Option<T::Balance> {
 		Some(1000000000u128.into())
 	}
 }

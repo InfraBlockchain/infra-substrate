@@ -48,7 +48,7 @@ use sp_runtime::{
 	},
 	transaction_validity::{TransactionValidity, TransactionValidityError, ValidTransaction},
 	types::{
-		CallCommitment, SystemTokenId, SystemTokenLocalAssetProvider, VoteAccountId, VoteWeight,
+		ExtrinsicMetadata, SystemTokenId, SystemTokenLocalAssetProvider, VoteAccountId, VoteWeight,
 	},
 	FixedPointOperand,
 };
@@ -276,12 +276,11 @@ where
 			match initial_payment {
 				// Ibs only pay with some asset
 				InitialPayment::Asset(already_withdrawn) => {
-					let hash =
-						CallCommitment::new(call_metadata.pallet_name, call_metadata.function_name)
-							.hash();
+					let metadata =
+						ExtrinsicMetadata::new(call_metadata.pallet_name, call_metadata.function_name);
 					// Actual fee will be based on 'fee table' or default calculation
 					let actual_fee: BalanceOf<T> =
-						if let Some(fee) = T::FeeTableProvider::get_fee_from_fee_table(hash) {
+						if let Some(fee) = T::FeeTableProvider::get_fee_from_fee_table(metadata) {
 							fee.into()
 						} else {
 							pallet_transaction_payment::Pallet::<T>::compute_actual_fee(
