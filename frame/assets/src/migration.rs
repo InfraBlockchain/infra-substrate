@@ -37,7 +37,7 @@ pub mod v1 {
 		pub sufficients: u32,
 		pub approvals: u32,
 		pub is_frozen: bool,
-		pub system_token_weight: u64,
+		pub system_token_weight: SystemTokenWeight,
 	}
 
 	impl<Balance, AccountId, DepositBalance> OldAssetDetails<Balance, AccountId, DepositBalance> {

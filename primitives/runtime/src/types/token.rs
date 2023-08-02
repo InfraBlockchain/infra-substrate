@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 pub type ParaId = u32;
 pub type PalletId = u8;
 pub type AssetId = u32;
-
+pub type SystemTokenWeight = u128;
 /// Data structure for Original system tokens
 #[derive(
 	Clone,

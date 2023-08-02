@@ -4,6 +4,6 @@ mod vote;
 
 pub use self::{
 	fee::ExtrinsicMetadata,
-	token::{AssetId, PalletId, ParaId, SystemTokenId, SystemTokenLocalAssetProvider},
+	token::{AssetId, PalletId, ParaId, SystemTokenId, SystemTokenWeight, SystemTokenLocalAssetProvider},
 	vote::{PotVote, PotVotes, PotVotesResult, VoteAccountId, VoteAssetId, VoteWeight},
 };

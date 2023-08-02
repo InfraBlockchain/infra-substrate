@@ -29,7 +29,7 @@ pub(super) type DepositBalanceOf<T, I = ()> =
 pub(super) type AssetAccountOf<T, I> =
 	AssetAccount<<T as Config<I>>::Balance, DepositBalanceOf<T, I>, <T as Config<I>>::Extra>;
 
-const CORRECTION_PARA_FEE_RATE: u64 = 1_000;
+const CORRECTION_PARA_FEE_RATE: SystemTokenWeight = 1_000;
 
 /// AssetStatus holds the current state of the asset. It could either be Live and available for use,
 /// or in a Destroying state.
@@ -71,8 +71,8 @@ pub struct AssetDetails<Balance, AccountId, DepositBalance> {
 	pub(super) approvals: u32,
 	/// The status of the asset
 	pub(super) status: AssetStatus,
-	/// The system token weight compared with iUSD.
-	pub(super) system_token_weight: u64,
+	/// The system token weight compared with base system token.
+	pub(super) system_token_weight: SystemTokenWeight,
 }
 
 /// Data concerning an approval.

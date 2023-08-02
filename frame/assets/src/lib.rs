@@ -152,15 +152,16 @@ pub use types::*;
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{AtLeast32BitUnsigned, CheckedAdd, CheckedSub, Saturating, StaticLookup, Zero},
-	types::SystemTokenLocalAssetProvider,
+	types::{SystemTokenLocalAssetProvider, SystemTokenWeight},
 	ArithmeticError, TokenError,
 };
 use sp_std::{borrow::Borrow, prelude::*};
 
+use frame_support::pallet_prelude::*;
+use frame_system::pallet_prelude::*;
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	ensure,
-	pallet_prelude::DispatchResultWithPostInfo,
 	storage::KeyPrefixIterator,
 	traits::{
 		tokens::{fungibles, DepositConsequence, WithdrawConsequence},
@@ -169,15 +170,13 @@ use frame_support::{
 	},
 };
 use frame_system::{pallet_prelude::OriginFor, Config as SystemConfig};
-use sp_runtime::types::SystemTokenId;
+use sp_runtime::types::{SystemTokenId, VoteWeight};
 
 pub use pallet::*;
 pub use weights::WeightInfo;
 
 type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
 const LOG_TARGET: &str = "runtime::assets";
-
-type SystemTokenWeight = u64;
 
 /// Trait with callbacks that are executed after successfull asset creation or destruction.
 pub trait AssetsCallback<AssetId, AccountId> {
@@ -194,8 +193,6 @@ impl<AssetId, AccountId> AssetsCallback<AssetId, AccountId> for () {}
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::pallet_prelude::*;
-	use frame_system::pallet_prelude::*;
 
 	/// The current storage version.
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
@@ -538,7 +535,7 @@ pub mod pallet {
 		/// The is_sufficient of an asset has been updated by the asset owner.
 		AssetIsSufficientChanged { asset_id: T::AssetId, new_is_sufficient: bool },
 		/// The is_sufficient of an asset has been updated by the asset owner.
-		AssetSystemTokenWeightChanged { asset_id: T::AssetId, system_token_weight: u64 },
+		AssetSystemTokenWeightChanged { asset_id: T::AssetId, system_token_weight: SystemTokenWeight },
 		/// No sufficient token to pay the transaciton fee
 		NoSufficientTokenToPay,
 		/// The ParaFeeRate has been updated
@@ -1729,7 +1726,7 @@ pub mod pallet {
 			is_frozen: bool,
 			system_token_id: SystemTokenId,
 			asset_link_parents: u8,
-			system_token_weight: u64,
+			system_token_weight: SystemTokenWeight,
 		) -> DispatchResult {
 			T::ForceOrigin::ensure_origin(origin.clone())?;
 			let owner = T::Lookup::lookup(owner)?;
@@ -1784,7 +1781,7 @@ pub mod pallet {
 		pub fn update_system_token_weight(
 			origin: OriginFor<T>,
 			id: T::AssetIdParameter,
-			system_token_weight: u64,
+			system_token_weight: SystemTokenWeight,
 		) -> DispatchResult {
 			T::ForceOrigin::ensure_origin(origin)?;
 			let id: T::AssetId = id.into();
