@@ -1002,6 +1002,13 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 	}
 }
 
+// Custom
+impl<T: Config<I>, I: 'static> Pallet<T, I> {
+	pub fn asset_detail(asset_id: &T::AssetId) -> Option<AssetDetails<T::Balance, T::AccountId, DepositBalanceOf<T, I>>> {
+		Asset::<T,I>::get(asset_id)
+	}
+}
+
 impl<T: Config<I>, I: 'static> SystemTokenLocalAssetProvider for Pallet<T, I> {
 	fn token_list() -> Option<Vec<sp_runtime::types::AssetId>> {
 		let assets = <Self as Store>::Asset::iter_keys();
