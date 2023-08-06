@@ -18,7 +18,7 @@
 //! Functions for the Assets pallet.
 
 use super::*;
-use frame_support::{traits::Get, BoundedVec};
+use frame_support::{traits::Get, BoundedVec, StorageMap};
 
 #[must_use]
 pub(super) enum DeadConsequence {
@@ -948,8 +948,15 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		}
 		most_balance.0
 	}
+}
 
-	pub fn create_asset_with_metadata(
+// Custom
+impl<T: Config<I>, I: 'static> Pallet<T, I> {
+	pub fn asset_detail(asset_id: &T::AssetId) -> Option<AssetDetails<T::Balance, T::AccountId, DepositBalanceOf<T, I>>> {
+		Asset::<T,I>::get(asset_id)
+	}
+
+	pub fn do_create_asset_with_metadata(
 		id: T::AssetIdParameter,
 		owner: AccountIdLookupOf<T>,
 		is_sufficient: bool,
@@ -1000,12 +1007,38 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 			Ok(())
 		})
 	}
-}
 
-// Custom
-impl<T: Config<I>, I: 'static> Pallet<T, I> {
-	pub fn asset_detail(asset_id: &T::AssetId) -> Option<AssetDetails<T::Balance, T::AccountId, DepositBalanceOf<T, I>>> {
-		Asset::<T,I>::get(asset_id)
+	pub fn do_update_system_token_weight(
+		id: T::AssetIdParameter,
+		system_token_weight: SystemTokenWeight,
+	) -> DispatchResult {
+		let id: T::AssetId = id.into();
+		Asset::<T,I>::try_mutate_exists(&id, |maybe_detail| -> DispatchResult {
+			let mut asset_detail = maybe_detail.take().ok_or(Error::<T, I>::Unknown)?;
+			asset_detail.system_token_weight = system_token_weight;
+			*maybe_detail = Some(asset_detail);
+			Ok(())
+		})?;
+
+		Ok(())
+	}
+
+	pub fn do_set_sufficient_and_unlink(
+		asset_id: T::AssetId,
+		is_sufficient: bool,
+	) -> DispatchResult {
+
+		Asset::<T,I>::try_mutate_exists(&asset_id, |maybe_detail| -> DispatchResult {
+			let mut asset_detail = maybe_detail.take().ok_or(Error::<T,I>::Unknown)?;
+			asset_detail.is_sufficient = is_sufficient;
+			*maybe_detail = Some(asset_detail);
+
+			Ok(())
+		})?;
+
+		T::AssetLink::unlink_system_token(asset_id)?;
+
+		Ok(())
 	}
 }
 

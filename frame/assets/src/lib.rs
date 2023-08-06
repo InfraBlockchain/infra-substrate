@@ -139,27 +139,29 @@ pub mod migration;
 pub mod mock;
 #[cfg(test)]
 mod tests;
-pub mod weights;
 
-mod extra_mutator;
-pub use extra_mutator::*;
 mod functions;
 mod impl_fungibles;
 mod impl_stored_map;
+
 mod types;
 pub use types::*;
+
+pub mod weights;
+pub use weights::WeightInfo;
+
+mod extra_mutator;
+pub use extra_mutator::*;
 
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{AtLeast32BitUnsigned, CheckedAdd, CheckedSub, Saturating, StaticLookup, Zero},
-	types::{SystemTokenLocalAssetProvider, SystemTokenWeight},
+	types::{SystemTokenLocalAssetProvider, SystemTokenWeight, SystemTokenId, VoteWeight},
 	ArithmeticError, TokenError,
 };
 use sp_std::{borrow::Borrow, prelude::*};
-
-use frame_support::pallet_prelude::*;
-use frame_system::pallet_prelude::*;
 use frame_support::{
+	pallet_prelude::*,
 	dispatch::{DispatchError, DispatchResult},
 	ensure,
 	storage::KeyPrefixIterator,
@@ -169,11 +171,12 @@ use frame_support::{
 		Currency, EnsureOriginWithArg, ReservableCurrency, StoredMap,
 	},
 };
-use frame_system::{pallet_prelude::OriginFor, Config as SystemConfig};
-use sp_runtime::types::{SystemTokenId, VoteWeight};
+use frame_system::{
+	pallet_prelude::*, 
+	Config as SystemConfig
+};
 
 pub use pallet::*;
-pub use weights::WeightInfo;
 
 type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
 const LOG_TARGET: &str = "runtime::assets";
@@ -531,9 +534,9 @@ pub mod pallet {
 		/// An asset has had its attributes changed by the `Force` origin.
 		AssetStatusChanged { asset_id: T::AssetId },
 		/// The min_balance of an asset has been updated by the asset owner.
-		AssetMinBalanceChanged { asset_id: T::AssetId, new_min_balance: T::Balance },
+		AssetMinBalanceChanged { asset_id: T::AssetId, min_balance: T::Balance },
 		/// The is_sufficient of an asset has been updated by the asset owner.
-		AssetIsSufficientChanged { asset_id: T::AssetId, new_is_sufficient: bool },
+		AssetIsSufficientChanged { asset_id: T::AssetId, is_sufficient: bool },
 		/// The is_sufficient of an asset has been updated by the asset owner.
 		AssetSystemTokenWeightChanged { asset_id: T::AssetId, system_token_weight: SystemTokenWeight },
 		/// No sufficient token to pay the transaciton fee
@@ -1581,7 +1584,7 @@ pub mod pallet {
 
 			Self::deposit_event(Event::AssetMinBalanceChanged {
 				asset_id: id,
-				new_min_balance: min_balance,
+				min_balance,
 			});
 			Ok(())
 		}
@@ -1655,7 +1658,7 @@ pub mod pallet {
 
 			Self::deposit_event(Event::AssetIsSufficientChanged {
 				asset_id: id,
-				new_is_sufficient: is_sufficient,
+				is_sufficient,
 			});
 			Ok(())
 		}
@@ -1677,19 +1680,14 @@ pub mod pallet {
 			is_sufficient: bool,
 		) -> DispatchResult {
 			T::ForceOrigin::ensure_origin(origin.clone())?;
-			let id: T::AssetId = id.into();
-
-			let mut details = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
-
-			details.is_sufficient = is_sufficient;
-			Asset::<T, I>::insert(&id, details);
-
-			T::AssetLink::unlink_system_token(id)?;
+			let asset_id: T::AssetId = id.into();
+			Self::do_set_sufficient_and_unlink(asset_id, is_sufficient)?;
 
 			Self::deposit_event(Event::AssetIsSufficientChanged {
-				asset_id: id,
-				new_is_sufficient: is_sufficient,
+				asset_id,
+				is_sufficient,
 			});
+			
 			Ok(())
 		}
 
@@ -1729,43 +1727,21 @@ pub mod pallet {
 			system_token_weight: SystemTokenWeight,
 		) -> DispatchResult {
 			T::ForceOrigin::ensure_origin(origin.clone())?;
-			let owner = T::Lookup::lookup(owner)?;
-			let id: T::AssetId = id.into();
+			Self::do_create_asset_with_metadata(
+				id, 
+				owner, 
+				is_sufficient, 
+				min_balance,
+				name,
+				symbol,
+				decimals,
+				is_frozen, 
+				system_token_id,
+				asset_link_parents,
+				system_token_weight
+			)?;
 
-			let bounded_name: BoundedVec<u8, T::StringLimit> =
-				name.clone().try_into().map_err(|_| Error::<T, I>::BadMetadata)?;
-
-			let bounded_symbol: BoundedVec<u8, T::StringLimit> =
-				symbol.clone().try_into().map_err(|_| Error::<T, I>::BadMetadata)?;
-
-			Self::do_force_create(id, owner, is_sufficient, min_balance)?;
-			ensure!(Asset::<T, I>::contains_key(id), Error::<T, I>::Unknown);
-
-			T::AssetLink::link_system_token(asset_link_parents, id, system_token_id)?;
-
-			let mut details = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
-			details.system_token_weight = system_token_weight;
-			Asset::<T, I>::insert(&id, details);
-
-			Metadata::<T, I>::try_mutate_exists(id, |metadata| {
-				let deposit = metadata.take().map_or(Zero::zero(), |m| m.deposit);
-				*metadata = Some(AssetMetadata {
-					deposit,
-					name: bounded_name,
-					symbol: bounded_symbol,
-					decimals,
-					is_frozen,
-				});
-
-				Self::deposit_event(Event::MetadataSet {
-					asset_id: id,
-					name,
-					symbol,
-					decimals,
-					is_frozen,
-				});
-				Ok(())
-			})
+			Ok(())
 		}
 		/// Sets the system_token_weight of an AssetDetails.
 		///
@@ -1784,15 +1760,10 @@ pub mod pallet {
 			system_token_weight: SystemTokenWeight,
 		) -> DispatchResult {
 			T::ForceOrigin::ensure_origin(origin)?;
-			let id: T::AssetId = id.into();
-
-			let mut details = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
-
-			details.system_token_weight = system_token_weight;
-			Asset::<T, I>::insert(&id, details);
+			Self::do_update_system_token_weight(id, system_token_weight)?;
 
 			Self::deposit_event(Event::AssetSystemTokenWeightChanged {
-				asset_id: id,
+				asset_id: id.into(),
 				system_token_weight,
 			});
 			Ok(())
