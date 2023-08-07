@@ -156,7 +156,7 @@ pub use extra_mutator::*;
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{AtLeast32BitUnsigned, CheckedAdd, CheckedSub, Saturating, StaticLookup, Zero},
-	types::{SystemTokenLocalAssetProvider, SystemTokenWeight, SystemTokenId, VoteWeight},
+	types::{SystemTokenLocalAssetProvider, SystemTokenWeight, SystemTokenId},
 	ArithmeticError, TokenError,
 };
 use sp_std::{borrow::Borrow, prelude::*};
@@ -176,7 +176,6 @@ use frame_system::{
 	pallet_prelude::*, 
 	Config as SystemConfig
 };
-use sp_runtime::types::SystemTokenId;
 
 pub use pallet::*;
 
