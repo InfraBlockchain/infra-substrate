@@ -171,10 +171,12 @@ use frame_support::{
 		Currency, EnsureOriginWithArg, ReservableCurrency, StoredMap,
 	},
 };
+
 use frame_system::{
 	pallet_prelude::*, 
 	Config as SystemConfig
 };
+use sp_runtime::types::SystemTokenId;
 
 pub use pallet::*;
 

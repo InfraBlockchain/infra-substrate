@@ -54,15 +54,3 @@ impl<SystemTokenId, Balance> FeeDetail<SystemTokenId, Balance> {
 	}
 }
 
-#[derive(Encode, Decode, Clone, Debug, TypeInfo, PartialEq)]
-/// Detail of voting of whom has been voted and its weight.
-pub struct VoteDetail<VoteAccountId, VoteWeight> {
-	candidate: VoteAccountId,
-	weight: VoteWeight,
-}
-
-impl<VoteAccountId, VoteWeight> VoteDetail<VoteAccountId, VoteWeight> {
-	pub fn new(candidate: VoteAccountId, weight: VoteWeight) -> Self {
-		Self { candidate, weight }
-	}
-}

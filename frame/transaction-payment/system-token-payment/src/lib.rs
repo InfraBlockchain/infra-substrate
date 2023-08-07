@@ -91,9 +91,9 @@ pub mod pallet {
 		/// has been paid by `who` in an asset `asset_id`.
 		AssetTxFeePaid {
 			fee_payer: T::AccountId,
-			fee_detail: FeeDetail<SystemTokenId, ChargeAssetBalanceOf<T>>,
+			fee_detail: FeeDetail<SystemTokenId, AssetBalanceOf<T>>,
 			tip: Option<AssetBalanceOf<T>>,
-			vote_detail: Option<VoteDetail<VoteAccountId, VoteWeight>>,
+			vote_candidate: Option<VoteAccountId>,
 		},
 	}
 
@@ -305,15 +305,12 @@ where
 							Pallet::<T>::deposit_event(Event::<T>::AssetTxFeePaid {
 								fee_payer: who,
 								fee_detail:
-									FeeDetail::<SystemTokenId, ChargeAssetBalanceOf<T>>::new(
+									FeeDetail::<SystemTokenId, AssetBalanceOf<T>>::new(
 										system_token_id.clone(),
-										actual_fee.into(),
+										converted_fee,
 									),
 								tip,
-								vote_detail: Some(VoteDetail::<VoteAccountId, VoteWeight>::new(
-									vote_candidate.clone(),
-									converted_fee.into(),
-								)),
+								vote_candidate: Some(vote_candidate.clone()),
 							});
 							// Update vote
 							T::VotingHandler::update_pot_vote(
@@ -327,12 +324,12 @@ where
 							Pallet::<T>::deposit_event(Event::<T>::AssetTxFeePaid {
 								fee_payer: who,
 								fee_detail:
-									FeeDetail::<SystemTokenId, ChargeAssetBalanceOf<T>>::new(
+									FeeDetail::<SystemTokenId, AssetBalanceOf<T>>::new(
 										system_token_id.clone(),
-										actual_fee.into(),
+										converted_fee,
 									),
 								tip,
-								vote_detail: None,
+								vote_candidate: None,
 							}),
 						_ => {},
 					}
