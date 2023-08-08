@@ -181,9 +181,10 @@ where
 		let (final_fee, refund) = paid.split(converted_fee);
 		// Refund to the account that paid the fees. If this fails, the account might have dropped
 		// below the existential balance. In that case we don't refund anything.
+		let final_fee_amount = final_fee.peek();
 		let _ = <T::Assets as Balanced<T::AccountId>>::resolve(who, refund);
 		// Handle the final fee, e.g. by transferring to the block author or burning.
 		HC::handle_credit(final_fee);
-		Ok((converted_fee, converted_tip))
+		Ok((final_fee_amount, converted_tip))
 	}
 }
