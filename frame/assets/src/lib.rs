@@ -153,17 +153,10 @@ pub use weights::WeightInfo;
 mod extra_mutator;
 pub use extra_mutator::*;
 
-use scale_info::TypeInfo;
-use sp_runtime::{
-	traits::{AtLeast32BitUnsigned, CheckedAdd, CheckedSub, Saturating, StaticLookup, Zero},
-	types::{SystemTokenLocalAssetProvider, SystemTokenWeight, SystemTokenId},
-	ArithmeticError, TokenError,
-};
-use sp_std::{borrow::Borrow, prelude::*};
 use frame_support::{
-	pallet_prelude::*,
 	dispatch::{DispatchError, DispatchResult},
 	ensure,
+	pallet_prelude::*,
 	storage::KeyPrefixIterator,
 	traits::{
 		tokens::{fungibles, DepositConsequence, WithdrawConsequence},
@@ -171,16 +164,22 @@ use frame_support::{
 		Currency, EnsureOriginWithArg, ReservableCurrency, StoredMap,
 	},
 };
-
-use frame_system::{
-	pallet_prelude::*, 
-	Config as SystemConfig
+use scale_info::TypeInfo;
+use sp_runtime::{
+	traits::{AtLeast32BitUnsigned, CheckedAdd, CheckedSub, Saturating, StaticLookup, Zero},
+	types::{SystemTokenId, SystemTokenLocalAssetProvider, SystemTokenWeight},
+	ArithmeticError, TokenError,
 };
+use sp_std::{borrow::Borrow, prelude::*};
+
+use frame_system::{pallet_prelude::*, Config as SystemConfig};
 
 pub use pallet::*;
 
 type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
 const LOG_TARGET: &str = "runtime::assets";
+const DEFAULT_PARA_FEE: u32 = 1_000_000;
+const DEFAULT_SYSTEM_TOKEN_WEIGHT: u128 = 1_000_000;
 
 /// Trait with callbacks that are executed after successfull asset creation or destruction.
 pub trait AssetsCallback<AssetId, AccountId> {
@@ -396,7 +395,7 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config<I>, I: 'static> GenesisBuild<T, I> for GenesisConfig<T, I> {
 		fn build(&self) {
-			ParaFeeRate::<T, I>::set(Some(1000));
+			ParaFeeRate::<T, I>::set(Some(DEFAULT_PARA_FEE));
 			for (id, owner, is_sufficient, min_balance) in &self.assets {
 				assert!(!Asset::<T, I>::contains_key(id), "Asset id already in use");
 				assert!(!min_balance.is_zero(), "Min balance should not be zero");
@@ -415,7 +414,7 @@ pub mod pallet {
 						sufficients: 0,
 						approvals: 0,
 						status: AssetStatus::Live,
-						system_token_weight: 100000,
+						system_token_weight: DEFAULT_SYSTEM_TOKEN_WEIGHT,
 					},
 				);
 			}
@@ -539,7 +538,10 @@ pub mod pallet {
 		/// The is_sufficient of an asset has been updated by the asset owner.
 		AssetIsSufficientChanged { asset_id: T::AssetId, is_sufficient: bool },
 		/// The is_sufficient of an asset has been updated by the asset owner.
-		AssetSystemTokenWeightChanged { asset_id: T::AssetId, system_token_weight: SystemTokenWeight },
+		AssetSystemTokenWeightChanged {
+			asset_id: T::AssetId,
+			system_token_weight: SystemTokenWeight,
+		},
 		/// No sufficient token to pay the transaciton fee
 		NoSufficientTokenToPay,
 		/// The ParaFeeRate has been updated
@@ -645,7 +647,7 @@ pub mod pallet {
 					sufficients: 0,
 					approvals: 0,
 					status: AssetStatus::Live,
-					system_token_weight: 100000,
+					system_token_weight: DEFAULT_SYSTEM_TOKEN_WEIGHT,
 				},
 			);
 
@@ -1583,10 +1585,7 @@ pub mod pallet {
 			details.min_balance = min_balance;
 			Asset::<T, I>::insert(&id, details);
 
-			Self::deposit_event(Event::AssetMinBalanceChanged {
-				asset_id: id,
-				min_balance,
-			});
+			Self::deposit_event(Event::AssetMinBalanceChanged { asset_id: id, min_balance });
 			Ok(())
 		}
 
@@ -1657,10 +1656,7 @@ pub mod pallet {
 
 			Asset::<T, I>::insert(&id, details);
 
-			Self::deposit_event(Event::AssetIsSufficientChanged {
-				asset_id: id,
-				is_sufficient,
-			});
+			Self::deposit_event(Event::AssetIsSufficientChanged { asset_id: id, is_sufficient });
 			Ok(())
 		}
 
@@ -1684,11 +1680,8 @@ pub mod pallet {
 			let asset_id: T::AssetId = id.into();
 			Self::do_set_sufficient_and_unlink(asset_id, is_sufficient)?;
 
-			Self::deposit_event(Event::AssetIsSufficientChanged {
-				asset_id,
-				is_sufficient,
-			});
-			
+			Self::deposit_event(Event::AssetIsSufficientChanged { asset_id, is_sufficient });
+
 			Ok(())
 		}
 
@@ -1729,17 +1722,17 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::ForceOrigin::ensure_origin(origin.clone())?;
 			Self::do_create_asset_with_metadata(
-				id, 
-				owner, 
-				is_sufficient, 
+				id,
+				owner,
+				is_sufficient,
 				min_balance,
 				name,
 				symbol,
 				decimals,
-				is_frozen, 
+				is_frozen,
 				system_token_id,
 				asset_link_parents,
-				system_token_weight
+				system_token_weight,
 			)?;
 
 			Ok(())
