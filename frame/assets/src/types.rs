@@ -29,7 +29,7 @@ pub(super) type DepositBalanceOf<T, I = ()> =
 pub(super) type AssetAccountOf<T, I> =
 	AssetAccount<<T as Config<I>>::Balance, DepositBalanceOf<T, I>, <T as Config<I>>::Extra>;
 
-const CORRECTION_PARA_FEE_RATE: SystemTokenWeight = 1_000_000;
+const DEFAULT_PARA_FEE_RATE: SystemTokenWeight = 1_000_000;
 
 /// AssetStatus holds the current state of the asset. It could either be Live and available for use,
 /// or in a Destroying state.
@@ -270,7 +270,7 @@ where
 		// balance * para_fee_rate / (system_token_weight * correction_para_fee_rate)
 		Ok(FixedU128::saturating_from_rational(
 			para_fee_rate,
-			asset.system_token_weight * CORRECTION_PARA_FEE_RATE,
+			asset.system_token_weight * DEFAULT_PARA_FEE_RATE,
 		)
 		.saturating_mul_int(balance))
 	}
